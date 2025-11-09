@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 import asyncio
 import json
+import sys
+import os
 from math import radians, sin, cos, asin, sqrt
 from urllib import request as urlrequest
 from urllib import parse as urlparse
@@ -381,3 +383,102 @@ out center tags;"""
         facilities.sort(key=lambda x: x["distance"])
 
     return {"results": facilities}
+
+
+@app.get("/agent")
+async def agent(url: str):
+    """Use AI agent to scrape and analyze a URL for homeless resources.
+
+    Args:
+        url: The URL to analyze for shelter, meal, and service information.
+
+    Returns:
+        JSON object with findings including:
+        - seed_url: The URL that was analyzed
+        - findings: List of discovered resources with contact info
+        - next_actions: Suggested next steps
+        - uncertainties: Gaps or unconfirmed information
+    """
+    import requests
+
+    # Add agent_util to path and import modules
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agent_util'))
+    import scrape_utils as su
+    from tools import TOOLS
+
+    # Load system prompt
+    system_prompt_path = os.path.join(os.path.dirname(__file__), '..', 'agent_util', 'agent_system.txt')
+    with open(system_prompt_path) as f:
+        SYSTEM_PROMPT = f.read()
+
+    VLLM_URL = "http://localhost:7545/v1/chat/completions"
+    MODEL = "nvidia/Llama-3_3-Nemotron-Super-49B-v1_5"
+
+    def call_tool(name, arguments):
+        fn = getattr(su, name, None)
+        if fn is None:
+            raise ValueError(f"Unknown tool: {name}")
+        return fn(**(arguments or {}))
+
+    def chat(messages):
+        payload = {
+            "model": MODEL,
+            "messages": messages,
+            "tools": TOOLS,
+            "tool_choice": "auto",
+            "max_tokens": 512
+        }
+        r = requests.post(VLLM_URL, json=payload, timeout=120)
+        r.raise_for_status()
+        return r.json()
+
+    # Build the query
+    query = (
+        f"Use tools to fetch {url}. Extract shelter or meal info, phones, hours, "
+        "and return the most relevant links."
+    )
+
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": query}
+    ]
+
+    # Agent loop - allow up to 4 tool use rounds
+    for _ in range(4):
+        resp = await asyncio.to_thread(chat, messages)
+        msg = resp["choices"][0]["message"]
+        tool_calls = msg.get("tool_calls", [])
+
+        if not tool_calls:
+            # Model answered directly - parse and return JSON
+            content = msg.get("content", "")
+            try:
+                # Try to extract JSON from the response
+                result = json.loads(content)
+                return result
+            except json.JSONDecodeError:
+                # If not valid JSON, return as-is
+                return {"response": content}
+
+        # Dispatch each tool call and feed results back
+        for tc in tool_calls:
+            name = tc["function"]["name"]
+            args = json.loads(tc["function"]["arguments"] or "{}")
+            result = await asyncio.to_thread(call_tool, name, args)
+
+            messages.append({
+                "role": "assistant",
+                "tool_calls": [tc]
+            })
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc["id"],
+                "name": name,
+                "content": json.dumps(result)
+            })
+
+    # If we exhausted the loop without a final answer
+    return {"error": "Agent stopped after max tool steps", "messages": messages}
+
+
+

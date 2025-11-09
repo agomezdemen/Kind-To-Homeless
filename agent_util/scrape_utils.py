@@ -296,6 +296,18 @@ def extract_phones(text: str) -> List[str]:
 def extract_hours(text: str) -> List[str]:
     return sorted(set(m.group(0).strip() for m in _RE_HOURS.finditer(text)))
 
+
+def extract_contacts(text: str) -> Dict[str, List[str]]:
+    """
+    Extract all contact information from text.
+    Returns dict with emails, phones, and hours.
+    """
+    return {
+        "emails": extract_emails(text),
+        "phones": extract_phones(text),
+        "hours": extract_hours(text)
+    }
+
 # ------------------------------
 # Higher-level mini-composites (still tiny)
 # ------------------------------

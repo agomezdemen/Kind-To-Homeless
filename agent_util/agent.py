@@ -3,9 +3,8 @@ import json, requests
 import scrape_utils as su
 from tools import TOOLS
 
-# Ollama server URL (mapped to port 7545)
-OLLAMA_URL = "http://localhost:7545/api/chat"
-MODEL = "nemotron:70B"  # Model from ollama-init.sh (slow - 5min+ per call)
+VLLM_URL = "http://localhost:7545/v1/chat/completions"
+MODEL    = "nvidia/Llama-3_3-Nemotron-Super-49B-v1_5"
 SYSTEM_PROMPT = open('agent_system.txt').read()
 
 def call_tool(name, arguments):
@@ -16,24 +15,16 @@ def call_tool(name, arguments):
   return fn(**(arguments or {}))
 
 def chat(messages):
-  # Convert OpenAI-style messages to Ollama format
   payload = {
     "model": MODEL,
     "messages": messages,
     "tools": TOOLS,
-    "stream": False
+    "tool_choice": "auto",     # let the model decide
+    "max_tokens": 512
   }
-  print(f"[agent] calling {MODEL} via Ollama...", flush=True)
-  r = requests.post(OLLAMA_URL, json=payload, timeout=300)
+  r = requests.post(VLLM_URL, json=payload, timeout=120)
   r.raise_for_status()
-  resp = r.json()
-
-  # Convert Ollama response to OpenAI-compatible format
-  return {
-    "choices": [{
-      "message": resp.get("message", {})
-    }]
-  }
+  return r.json()
 
 def run(query):
   messages = [
@@ -41,25 +32,20 @@ def run(query):
     {"role":"user","content":query}
   ]
 
-  for step in range(4):  # small loop to allow multi-step tool use
-    print(f"[agent] step {step+1}/4", flush=True)
+  for _ in range(4):  # small loop to allow multi-step tool use
     resp = chat(messages)
     msg  = resp["choices"][0]["message"]
     tool_calls = msg.get("tool_calls", [])
 
     if not tool_calls:
       # model answered directly
-      print(f"\n[agent] final answer:\n{msg.get('content','')}")
+      print(msg.get("content",""))
       return
 
     # dispatch each tool call, then feed results back
-    print(f"[agent] executing {len(tool_calls)} tool call(s)")
     for tc in tool_calls:
       name = tc["function"]["name"]
-      # Ollama returns dict, OpenAI returns JSON string
-      raw_args = tc["function"]["arguments"]
-      args = raw_args if isinstance(raw_args, dict) else json.loads(raw_args or "{}")
-      print(f"  → {name}({', '.join(f'{k}={v!r}' if len(str(v)) < 50 else f'{k}=...' for k,v in args.items())})")
+      args = json.loads(tc["function"]["arguments"] or "{}")
       result = call_tool(name, args)
 
       messages.append({
@@ -73,7 +59,7 @@ def run(query):
         "content": json.dumps(result)   # text—model will read this and continue
       })
 
-  print("\n[agent] stopped after max tool steps.")
+  print("Stopped after max tool steps.")
 
 if __name__ == "__main__":
   run("Given https://austinstreet.org/ find ‘shelter’ mentions and relevant links.")

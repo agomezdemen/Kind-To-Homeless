@@ -78,7 +78,7 @@ def test_wp_search(url: str):
         print(f"wp_search_pages error: {e}")
 
 def test_agent_roundtrip(url: str, terms: list[str]):
-    print("\n[4/4] agent + Ollama round-trip")
+    print("\n[4/4] agent + vLLM round-trip")
     try:
         import agent
     except Exception as e:
@@ -88,18 +88,7 @@ def test_agent_roundtrip(url: str, terms: list[str]):
     # check server reachability
     host, port = "127.0.0.1", 7545
     if not reachable(host, port):
-        print(f"Ollama server not reachable at {host}:{port} — start it to run this step")
-        return
-
-    # verify the API endpoint is working (Ollama uses /api/tags to list models)
-    try:
-        import requests
-        test_resp = requests.get(f"http://{host}:{port}/api/tags", timeout=5)
-        if test_resp.status_code != 200:
-            print(f"Ollama server not responding properly — skipping agent test")
-            return
-    except Exception as e:
-        print(f"Ollama server API not ready at {host}:{port} — skipping agent test ({e})")
+        print(f"vLLM server not reachable at {host}:{port} — start it to run this step")
         return
 
     # nudge the model to use tools
