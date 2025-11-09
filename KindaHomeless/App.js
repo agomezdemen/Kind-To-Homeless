@@ -4,12 +4,15 @@ import { StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-nativ
 
 import { Map } from './Map';
 import Header from './Header';
+import Navbar from './Navbar';
 
 export default function App() {
+
   return (
-      <View>
+      <View className="h-full">
           <Map />
           <Header />
+          <Navbar />
       </View>
   );
 }
