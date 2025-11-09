@@ -2,11 +2,13 @@ import React, {useEffect, useRef, useState} from 'react';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-native';
 import * as Location from 'expo-location';
-  
 export function Map() {
   const mapRef = useRef(null);
   const [region, setRegion] = useState(null);
-  const [markers, setMarkers] = useState([]);
+  const [yourLocation, setYourLocation] = useState(null);
+  const [foodMarkers, setFoodMarkers] = useState([]);
+  const [shelterMarkers, setShelterMarkers] = useState([]);
+  const [showerMarkers, setShowerMarkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -32,7 +34,8 @@ export function Map() {
 
         setRegion(initialRegion);
 
-        // Determine API base host. On Android emulator use 10.0.2.2 to reach host machine.
+        // Determine API base host. On Android emulator use 10.0.2.2 to reach host machine. 
+        // Toilets/Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
         /*const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://127.0.0.1:8000';
         const url = `${apiHost}/nearby?lat=${latitude}&lon=${longitude}&radius=1`;
 
@@ -56,7 +59,7 @@ export function Map() {
           latitude,
           longitude,
         };
-        setMarkers([yourMarker]); // Temporarily just show user location as marker
+        setYourLocation(yourMarker); // Temporarily just show user location as marker
         // Auto-zoom tighter around user
         const zoomRegion = { ...initialRegion, latitudeDelta: 0.004, longitudeDelta: 0.004 };
         setTimeout(() => {
@@ -72,10 +75,24 @@ export function Map() {
     })();
   }, []);
 
-  const handleMapPress = (e) => {
+
+  const handleMapPress = (e) => {// replace the Pin text thing with eleven labs api call later
     const { latitude, longitude } = e.nativeEvent.coordinate;
-    if(markers.includes(m => m.latitude === latitude && m.longitude === longitude)) {
-      markers.at(markers.findIndex(m => m.latitude === latitude && m.longitude === longitude)).title = "PIN check";
+    if(foodMarkers.includes(m => m.latitude === latitude && m.longitude === longitude)) {
+      const select = foodMarkers.at(foodMarkers.findIndex(m => m.latitude === latitude && m.longitude === longitude))
+      //add request to eleven labs here
+      setSelectedMarker(select);
+    } else if(shelterMarkers.includes(m => m.latitude === latitude && m.longitude === longitude)) {
+      const select = shelterMarkers.at(shelterMarkers.findIndex(m => m.latitude === latitude && m.longitude === longitude))
+      //add request to eleven labs here
+      setSelectedMarker(select);
+    } else if(showerMarkers.includes(m => m.latitude === latitude && m.longitude === longitude)) {
+      const select = showerMarkers.at(showerMarkers.findIndex(m => m.latitude === latitude && m.longitude === longitude))
+      //add request to eleven labs here
+      setSelectedMarker(select);
+    } else if(yourLocation && yourLocation.latitude === latitude && yourLocation.longitude === longitude) {
+      //add request to eleven labs here
+      setSelectedMarker(yourLocation);
     }
     //const id = String(Date.now());
     //setMarkers((prev) => [...prev, { id, title: 'Pinned', description: 'User placed', latitude, longitude }]);
@@ -107,19 +124,35 @@ export function Map() {
         initialRegion={region}
         onPress={handleMapPress}
       >
-        {markers.map((m) => (
+          {yourLocation && (
+            <Marker
+              key={yourLocation.id}
+              coordinate={{ latitude: yourLocation.latitude, longitude: yourLocation.longitude }}
+              //pinColor='blue'
+            >
+            
+            </Marker>
+          )}
+        {shelterMarkers.map((marker) => (
           <Marker
-            key={m.id}
-            coordinate={{ latitude: m.latitude, longitude: m.longitude }}
-          >
-            <Callout>
-              <View /*style={{ width: 180 }}*/>
-                <Text /*style={{ fontWeight: '600' }}*/>{m.title}</Text>
-                <Text>{m.description}</Text>
-                <Text /*style={{ color: '#666', marginTop: 6 }}*/>{m.latitude.toFixed(5)}, {m.longitude.toFixed(5)}</Text>
-              </View>
-            </Callout>
-          </Marker>
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+            pinColor='green'
+          />
+        ))}
+        {showerMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+            pinColor='blue'
+          />
+        ))}
+        {foodMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+            pinColor='yellow'
+          />
         ))}
       </MapView>
     </View>
