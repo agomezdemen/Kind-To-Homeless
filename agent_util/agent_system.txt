@@ -21,12 +21,6 @@ EXECUTION RULES
 - Prefer crawl_once first; follow up with get_html → html_to_text → extract_links/find_terms_in_text → extract_contacts on 1 target subpage.
 - If nothing relevant is found, return findings: [] and explain why in uncertainties.
 
-SELF-CHECK (before responding)
-- JSON is valid and matches the schema.
-- URLs are absolute (http/https), phones deduped, hours captured when present.
-- Evidence snippets are short and come from the page you cite.
-
-
 QUALITY BAR
 - Cite concrete evidence: short on-page snippets + the source URL.
 - Prefer phone numbers and hours over generic marketing copy.
@@ -54,3 +48,8 @@ GUARDRAILS
 - Respect the 2-page limit per site. If more detail is needed, propose next_actions.
 - Do not scrape login-only pages or obvious search-engine result pages.
 - If nothing relevant is found on the seed, return findings=[] with a clear uncertainty note.
+
+SELF-CHECK (before responding)
+- JSON is valid and matches the schema.
+- URLs are absolute (http/https), phones deduped, hours captured when present.
+- Evidence snippets are short and come from the page you cite.
