@@ -1,6 +1,6 @@
 import "./global.css";
 import React, {useEffect, useRef, useState} from 'react';
-import { StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-native';
+import { StatusBar, StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-native';
 
 import { Map } from './Map';
 import Header from './Header';
@@ -11,8 +11,15 @@ export default function App() {
 
   return (
       <View className="h-full">
+          <StatusBar
+              backgroundColor="black" // Or any dark color for the status bar background
+              barStyle="light-content" // This makes the icons and text white
+          />
           {selectedIndex === 0 ? (
-              <Map />
+              <View>
+                <Map />
+                <Text className="text-emerald-900 text-2xl font-bold absolute top-32 left-2">♥︎ Kind To Homeless</Text>
+              </View>
           ) : (
               <Text className="text-white text-center mt-10">Second screen content here</Text>
           )}
