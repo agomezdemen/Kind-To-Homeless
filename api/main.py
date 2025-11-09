@@ -43,16 +43,17 @@ async def info():
 
 
 @app.get("/nearby")
-async def nearby(latitude: float, longitude: float, radius: float, feature: str = "toilets"):
-    """Return up to 20 nearby facilities within the given radius (miles).
+async def nearby(latitude: float, longitude: float, radius: float, feature: str = "toilets", limit: int = 20):
+    """Return nearby facilities within the given radius (miles).
     Args:
         latitude: Latitude of the center point.
         longitude: Longitude of the center point.
         radius: Search radius in miles.
         feature: Type of feature to search for (e.g., 'toilets', 'shelter', 'drinking_water').
                  Default is 'toilets'. See /info for available options.
+        limit: Maximum number of results to return. Default is 20.
     Returns:
-        JSON with list of facilities (id, latitude, longitude, name, address, distance) limited to 20, sorted by nearest first.
+        JSON with list of facilities (id, latitude, longitude, name, address, distance) limited by the specified limit, sorted by nearest first.
     """
     # Map simple feature names to OSM tags
     feature_map = {
@@ -209,12 +210,12 @@ out center tags;"""
         elif tags.get("name"):
             named_places.append(el)
 
-    # Sort by distance and limit to 20
+    # Sort by distance and apply limit
     facilities_list.sort(key=lambda x: x["_d"])  # nearest first
 
     # Process each facility
     facilities = []
-    for it in facilities_list[:20]:
+    for it in facilities_list[:limit]:
         address = await asyncio.to_thread(_reverse_geocode, it["latitude"], it["longitude"])
 
         # Use the facility's name tag if it exists
