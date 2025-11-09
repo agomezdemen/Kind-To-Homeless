@@ -55,7 +55,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(toiletData !== undefined && toiletData.results){
               setToiletMarkers(toiletData.results.map((item, index) => ({
                 id: `toilet-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -70,7 +70,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(showerData !== undefined && showerData.results){
               setShowerMarkers(showerData.results.map((item, index) => ({
                 id: `shower-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -85,7 +85,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(foodData !== undefined && foodData.results){
               setFoodMarkers(foodData.results.map((item, index) => ({
                 id: `food-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -99,7 +99,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(soupKitchenData !== undefined && soupKitchenData.results){
               setFoodMarkers(prev => [...prev, ...soupKitchenData.results.map((item, index) => ({
                 id: `soup_kitchen-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -113,7 +113,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
           //   if(socialcenterData !== undefined && socialcenterData.results){
           //     setShelterMarkers(prev => [...prev, ...socialcenterData.results.map((item, index) => ({
           //       id: `social_centre-${index}`,
-          //       title: item.name,
+          //       name: item.name,
           //       description: item.description,
           //       latitude: item.latitude,
           //       longitude: item.longitude,
@@ -126,7 +126,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(socialFacilityData !== undefined && socialFacilityData.results){
               setShelterMarkers(prev => [...prev, ...socialFacilityData.results.map((item, index) => ({
                 id: `social_facility-${index+1}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -141,7 +141,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(homelessServicesData !== undefined && homelessServicesData.results){
               setShelterMarkers(prev => [...prev, ...homelessServicesData.results.map((item, index) => ({
                 id: `homeless_services-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -156,7 +156,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(drinkingWaterData !== undefined && drinkingWaterData.results){
               setDrinkingWaterMarkers(drinkingWaterData.results.map((item, index) => ({
                 id: `drinking_water-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -171,7 +171,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(waterTapData !== undefined && waterTapData.results){
               setDrinkingWaterMarkers(prev => [...prev, ...waterTapData.results.map((item, index) => ({
                 id: `water_tap-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -186,7 +186,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(clothingBankData !== undefined && clothingBankData.results){
               setClothesMarkers(clothingBankData.results.map((item, index) => ({
                 id: `clothing_bank-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -201,7 +201,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(laundryData !== undefined && laundryData.results){
               setClothesMarkers(prev => [...prev, ...laundryData.results.map((item, index) => ({
                 id: `laundry-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -216,7 +216,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
           //   if(placeOfWorshipData !== undefined && placeOfWorshipData.results){
           //     setPlaceOfWorshipMarkers(placeOfWorshipData.results.map((item, index) => ({
           //       id: `place_of_worship-${index}`,
-          //       title: item.name,
+          //       name: item.name,
           //       description: item.description,
           //       latitude: item.latitude,
           //       longitude: item.longitude,
@@ -229,7 +229,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(welfareData !== undefined && welfareData.results){
               setWelfareMarkers(welfareData.results.map((item, index) => ({
                 id: `welfare-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -244,7 +244,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(outreachData !== undefined && outreachData.results){
               setWelfareMarkers(prev => [...prev, ...outreachData.results.map((item, index) => ({
                 id: `outreach-${index}`,
-                title: item.name,
+                name: item.name,
                 description: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
@@ -259,10 +259,12 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             if(allData !== undefined && allData.results){
               setCombinedMarkers(allData.results.map((item, index) => ({
                 id: `all-${index}`,
-                title: item.name,
-                description: item.description,
+                name: item.name,
+                feature_type: item.description,
                 latitude: item.latitude,
                 longitude: item.longitude,
+                distance: item.distance,
+                address: item.address
               })));
             }
           }
@@ -272,7 +274,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
 
         const yourMarker = {
           id: 'you-1',
-          title: 'You are here',
+          name: 'You are here',
           description: 'Current Location',
           latitude,
           longitude,
