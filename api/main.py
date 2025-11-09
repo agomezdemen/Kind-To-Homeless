@@ -542,12 +542,12 @@ async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
         # First replace newlines with commas, then split on commas
         response_text = response_text.replace('\n', ',')
         queries = [q.strip() for q in response_text.split(',') if q.strip()]
-        # Search each query and collect all URLs (10 per query)
+        # Search each query and collect all URLs (50 per query)
         all_results_by_query = {}
         for query in queries:
             # Append " November 2025" to each search query
             search_query = f"{query} November 2025"
-            search_results = await search(search_query, max_results=10)
+            search_results = await search(search_query, max_results=50)
             if "results" in search_results:
                 all_results_by_query[query] = search_results["results"]
 
@@ -636,110 +636,301 @@ async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
         return {"error": str(e), "type": type(e).__name__}
 
 
-@app.get("/agent")
-async def agent(url: str):
-    """Use AI agent to scrape and analyze a URL for homeless resources.
+@app.get("/scrape_events")
+async def scrape_events(latitude: float = 30.2672, longitude: float = -97.7431):
+    """Scrape event information from URLs found via prompt_search.
+
+    This endpoint:
+    1. Calls /prompt_search to find relevant URLs for homeless services and food distribution events
+    2. Scrapes each URL to extract readable text content
+    3. Returns structured JSON with page content, contact info, and metadata
 
     Args:
-        url: The URL to analyze for shelter, meal, and service information.
+        latitude: Latitude for location-based search. Default is Austin, Texas.
+        longitude: Longitude for location-based search. Default is Austin, Texas.
 
     Returns:
-        JSON object with findings including:
-        - seed_url: The URL that was analyzed
-        - findings: List of discovered resources with contact info
-        - next_actions: Suggested next steps
-        - uncertainties: Gaps or unconfirmed information
+        JSON object with:
+        - search_queries: List of search queries used
+        - total_urls: Number of URLs processed
+        - scraped_pages: List of scraped page data including:
+            - url: The page URL
+            - title: Page title
+            - query: Original search query that found this URL
+            - text_content: Cleaned plaintext of the page (first 3000 chars)
+            - contacts: Extracted emails, phones, and hours
+            - success: Whether scraping succeeded
+            - error: Error message if scraping failed
     """
+    import time
+
     try:
-        import requests
+        start_time = time.time()
 
-        # Normalize URL - add https:// if no protocol
-        if not url.startswith(('http://', 'https://')):
-            url = 'https://' + url
+        # Step 1: Call prompt_search to get relevant URLs
+        print(f"Calling prompt_search with lat={latitude}, lon={longitude}")
+        search_results = await prompt_search(latitude, longitude)
 
-        # Add agent_util to path and import modules
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'agent_util'))
-        import scrape_utils as su
-        from tools import TOOLS
+        if "error" in search_results:
+            return {"error": "Failed to get search results", "detail": search_results}
 
-        # Load system prompt
-        system_prompt_path = os.path.join(os.path.dirname(__file__), '..', 'agent_util', 'agent_system.txt')
-        with open(system_prompt_path) as f:
-            SYSTEM_PROMPT = f.read()
+        urls_to_scrape = search_results.get("urls", [])
+        search_queries = search_results.get("search_queries", [])
 
-        # Use ollama service with OpenAI-compatible endpoint
-        ollama_host = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
-        OLLAMA_URL = f"{ollama_host}/v1/chat/completions"
-        MODEL = "nemotron:70B"  # Use the model name that's actually loaded in Ollama
-
-        def call_tool(name, arguments):
-            fn = getattr(su, name, None)
-            if fn is None:
-                raise ValueError(f"Unknown tool: {name}")
-            return fn(**(arguments or {}))
-
-        def chat(messages):
-            payload = {
-                "model": MODEL,
-                "messages": messages,
-                "stream": False
+        if not urls_to_scrape:
+            return {
+                "search_queries": search_queries,
+                "total_urls": 0,
+                "scraped_pages": [],
+                "message": "No URLs found to scrape"
             }
-            # Add tools if available
-            if TOOLS:
-                payload["tools"] = TOOLS
 
-            r = requests.post(OLLAMA_URL, json=payload, timeout=120)
-            r.raise_for_status()
-            return r.json()
+        print(f"Found {len(urls_to_scrape)} URLs to scrape")
 
-        # Build the query
-        query = (
-            f"Use tools to fetch {url}. Extract shelter or meal info, phones, hours, "
-            "and return the most relevant links."
-        )
+        # Step 2: Import scraping utilities
+        # Add parent directory to path to import from agent_util
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
 
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": query}
-        ]
+        from agent_util.scrape_utils import get_html, html_to_text, extract_title, extract_contacts
 
-        # Agent loop - allow up to 4 tool use rounds
-        for _ in range(4):
-            resp = await asyncio.to_thread(chat, messages)
-            msg = resp["choices"][0]["message"]
-            tool_calls = msg.get("tool_calls", [])
+        # Step 3: Scrape each URL
+        def _scrape_url(url_info: dict) -> dict:
+            """Scrape a single URL and extract content."""
+            url = url_info['url']
+            try:
+                print(f"Scraping: {url}")
+                html = get_html(url, timeout=20)
+                title = extract_title(html)
+                text = html_to_text(html)
 
-            if not tool_calls:
-                # Model answered directly - parse and return JSON
-                content = msg.get("content", "")
-                try:
-                    # Try to extract JSON from the response
-                    result = json.loads(content)
-                    return result
-                except json.JSONDecodeError:
-                    # If not valid JSON, return as-is
-                    return {"response": content}
+                # Extract contact information
+                contacts = extract_contacts(text)
 
-            # Dispatch each tool call and feed results back
-            for tc in tool_calls:
-                name = tc["function"]["name"]
-                args = json.loads(tc["function"]["arguments"] or "{}")
-                result = await asyncio.to_thread(call_tool, name, args)
+                # Truncate text to first 3000 characters for readability
+                text_preview = text[:3000] + "..." if len(text) > 3000 else text
 
-                messages.append({
-                    "role": "assistant",
-                    "tool_calls": [tc]
-                })
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc["id"],
-                    "name": name,
-                    "content": json.dumps(result)
-                })
+                return {
+                    "url": url,
+                    "title": title,
+                    "query": url_info.get('query', ''),
+                    "text_content": text_preview,
+                    "full_text_length": len(text),
+                    "contacts": contacts,
+                    "success": True
+                }
+            except Exception as e:
+                print(f"Error scraping {url}: {type(e).__name__}: {e}")
+                return {
+                    "url": url,
+                    "title": url_info.get('title', ''),
+                    "query": url_info.get('query', ''),
+                    "text_content": "",
+                    "full_text_length": 0,
+                    "contacts": {"emails": [], "phones": [], "hours": []},
+                    "success": False,
+                    "error": f"{type(e).__name__}: {str(e)}"
+                }
 
-        # If we exhausted the loop without a final answer
-        return {"error": "Agent stopped after max tool steps", "messages": messages}
+        # Scrape all URLs in parallel
+        print("Starting parallel scraping...")
+        scrape_tasks = [asyncio.to_thread(_scrape_url, url_info) for url_info in urls_to_scrape]
+        scraped_pages = await asyncio.gather(*scrape_tasks)
+
+        # Count successful scrapes
+        successful = sum(1 for page in scraped_pages if page.get("success"))
+        failed = len(scraped_pages) - successful
+
+        elapsed = time.time() - start_time
+        print(f"Scraping complete: {successful} successful, {failed} failed in {elapsed:.2f}s")
+
+        return {
+            "search_queries": search_queries,
+            "total_urls": len(urls_to_scrape),
+            "successful_scrapes": successful,
+            "failed_scrapes": failed,
+            "scraped_pages": scraped_pages,
+            "elapsed_seconds": round(elapsed, 2)
+        }
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e), "type": type(e).__name__}
+
+
+@app.post("/extract_event")
+async def extract_event(content: str):
+    """Extract event information from scraped web page content using Ollama.
+
+    This endpoint:
+    1. Uses Ollama to analyze the content and determine if it describes a valid event
+    2. If valid, extracts event details (name, date, address, summary)
+    3. Geocodes the address using Nominatim to get GPS coordinates
+    4. Returns structured event JSON or null if no valid event found
+
+    Args:
+        content: The scraped web page text content to analyze
+
+    Returns:
+        JSON object with:
+        - event: Event object with properties (Name, Date, address, latitude, longitude, summary)
+                 or null if no valid event was found
+        - reasoning: Brief explanation of why event was/wasn't created
+    """
+    import time
+
+    try:
+        start_time = time.time()
+
+        # Build prompt for Ollama to extract event information
+        extraction_prompt = f"""You are an event extraction assistant. Analyze the following web page content to determine if it describes a specific, actionable food distribution event, meal service, or homeless aid event.
+
+Requirements for a valid event:
+- Must have a specific date or recurring schedule (e.g., "November 15th", "Every Tuesday at 5pm")
+- Must have a physical location/address where the event occurs
+- Must be related to food distribution, meals, shelter, or direct aid for homeless/needy individuals
+- Must be current or upcoming (late 2024 or 2025)
+
+If valid event found, extract:
+1. Name: Short descriptive name for the event
+2. Date: The date/time or recurring schedule in clear format
+3. Address: Full physical address where event occurs
+4. Summary: 1-2 sentence description of what's offered
+
+Output format:
+If valid event exists, respond with JSON only:
+{{"valid": true, "name": "...", "date": "...", "address": "...", "summary": "..."}}
+
+If NO valid event (no clear date, no address, just general info, etc.), respond with JSON only:
+{{"valid": false, "reason": "brief explanation"}}
+
+Content to analyze:
+{content[:4000]}"""
+
+        # Call Ollama
+        ollama_host = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
+        ollama_url = f"{ollama_host}/api/generate"
+
+        payload = {
+            "model": "nemotron:70B",
+            "prompt": extraction_prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.3
+            }
+        }
+
+        def _query_ollama():
+            req = urlrequest.Request(
+                ollama_url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urlrequest.urlopen(req, timeout=90) as resp:
+                body = resp.read().decode('utf-8')
+                result = json.loads(body)
+                return result.get("response", "").strip()
+
+        print("Calling Ollama to extract event information...")
+        response_text = await asyncio.to_thread(_query_ollama)
+        print(f"Ollama response: {response_text[:200]}...")
+
+        # Parse JSON response from Ollama
+        # Clean up response - sometimes LLMs add markdown code blocks
+        response_text = response_text.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+
+        try:
+            event_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse Ollama JSON response: {e}")
+            return {
+                "event": None,
+                "reasoning": "Failed to parse event extraction response",
+                "raw_response": response_text[:500]
+            }
+
+        # Check if valid event was found
+        if not event_data.get("valid", False):
+            return {
+                "event": None,
+                "reasoning": event_data.get("reason", "No valid event found")
+            }
+
+        # Extract event details
+        event_name = event_data.get("name", "")
+        event_date = event_data.get("date", "")
+        event_address = event_data.get("address", "")
+        event_summary = event_data.get("summary", "")
+
+        if not event_address:
+            return {
+                "event": None,
+                "reasoning": "Event found but no address provided"
+            }
+
+        # Geocode the address using Nominatim
+        def _geocode_address(address: str) -> dict:
+            """Query Nominatim to get coordinates for an address."""
+            nominatim_url = f"http://nominatim:8080/search?format=json&q={urlparse.quote(address)}&limit=1"
+            try:
+                req = urlrequest.Request(nominatim_url, method="GET")
+                with urlrequest.urlopen(req, timeout=15) as resp:
+                    body = resp.read().decode("utf-8")
+                    if not body:
+                        return None
+                    results = json.loads(body)
+                    if results and len(results) > 0:
+                        result = results[0]
+                        return {
+                            "latitude": float(result["lat"]),
+                            "longitude": float(result["lon"]),
+                            "display_name": result.get("display_name", address)
+                        }
+                    return None
+            except Exception as e:
+                print(f"Geocoding error: {e}")
+                return None
+
+        print(f"Geocoding address: {event_address}")
+        geocode_result = await asyncio.to_thread(_geocode_address, event_address)
+
+        if not geocode_result:
+            return {
+                "event": None,
+                "reasoning": f"Could not geocode address: {event_address}"
+            }
+
+        # Build final event object
+        event_object = {
+            "Name": event_name,
+            "Date": event_date,
+            "summary": event_summary,
+            "address": geocode_result["display_name"],
+            "latitude": geocode_result["latitude"],
+            "longitude": geocode_result["longitude"]
+        }
+
+        elapsed = time.time() - start_time
+        print(f"Event extracted successfully in {elapsed:.2f}s")
+
+        return {
+            "event": event_object,
+            "reasoning": "Valid event found and geocoded successfully"
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e), "type": type(e).__name__}
+
 
