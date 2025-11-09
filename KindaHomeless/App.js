@@ -10,8 +10,7 @@ export default function App() {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [selectedMarker, setSelectedMarker] = useState(null);
     const [combinedMarkers, setCombinedMarkers] = useState([]);
-    useEffect(() => {
-        (async () => {
+    const combined = async () => {
           
             // Determine API base host. On Android emulator use 10.0.2.2 to reach host machine. 
             // Toilets: tan markers, Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
@@ -40,7 +39,7 @@ export default function App() {
               
             } catch (apiError) {
               console.error('Error fetching nearby data:', apiError);
-            }})})
+            }}
     useEffect(() => {
         console.log("Combined Markers Updated:", combinedMarkers);
     }, [combinedMarkers]);
