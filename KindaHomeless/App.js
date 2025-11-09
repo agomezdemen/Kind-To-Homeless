@@ -14,7 +14,7 @@ export default function App() {
     const [searchQuery, setSearchQuery] = useState("");
     const [userLocation, setUserLocation] = useState(null);
     const hasTriggeredRef = useRef(false);
-    const [events, setEvents] = useState({});
+    const [events, setEvents] = useState([]);
     useEffect(() => {
         console.log(selectedMarker);
     }, [selectedMarker]);
@@ -42,21 +42,7 @@ export default function App() {
                 const apiHost = 'http://162.243.235.232:7544';
                 const url = `${apiHost}/find_events?latitude=${userLocation.latitude}&longitude=${userLocation.longitude}`;
                 console.log("Fetching events:", url);
-                const resAll = `{
-  "events": [
-    {
-      "Name": "Local Good Pantry",
-      "Date": "Every Tuesday, Thursday, and Saturday",
-      "Summary": "The Local Good Pantry, part of the Local Good Collective started by Chase Oaks Church, provides food assistance to the Richardson community. It partners with the City of Richardson and the North Texas Food Bank to help local residents access food and resources.",
-      "Address": "741 S Sherman St, Richardson, TX 75081",
-      "latitude": 32.9392,
-      "longitude": -96.7294,
-      "source_url": "https://localgoodpantry.org/"
-    }
-  ],
-  "processing_time": 55.26,
-  "urls_processed": 0
-}`;
+                const resAll =await fetch(`${url}`);
                 setEvents(JSON.parse(resAll));
                 // try {
                 //     const resAll = await fetch(url);

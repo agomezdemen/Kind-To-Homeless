@@ -15,11 +15,25 @@ export default function Events({events}) {
     useEffect(() => {
         console.log(events);
     }, [events])
+
+    // Add null check and handle empty events
+    if (!events || events.length === 0) {
+        return (
+            <View className="h-full w-full justify-center items-center">
+                <View className="absolute justify-center top-1/2 items-center text-center w-full text-lg">
+                    <ActivityIndicator size="large" />
+                    <Text>Researching community resources...</Text>
+                </View>
+            </View>
+        );
+    }
+
     return (
-        <ScrollView  contentContainerStyle={{alignItems:"center",flex:1,gap:4}} className="h-full top-36 w-full flex gap-4 ">
+        <ScrollView contentContainerStyle={{alignItems:"center",flex:1,gap:4}} className="h-full top-36 w-full flex gap-4 ">
             <Text className="text-6xl ">Events</Text>
             <View className="border-b-2 border-b-gray-200 w-1/2 h-0 mt-2 mb-2"/>
-            {events.events.map((event, i) => {return (
+            {/* Change events.events.map to just events.map */}
+            {events.map((event, i) => (
                 <View key={i} className="bg-emerald-900 m-2 w-10/12 rounded-2xl items-center flex p-4">
                     <Text className="text-white text-3xl">{event.Name}</Text>
                     <Text className="text-gray-200 text-xl">{event.Date}</Text>
@@ -30,17 +44,8 @@ export default function Events({events}) {
                     }}>
                         <Icon name="map" color="white"/>
                     </View>
-                </View>)
-            })}
-            {events.length === 0 && (
-                <View className="h-full w-full justify-center items-center">
-                    <View className="absolute justify-center top-1/2 items-center text-center w-full text-lg">
-                        <ActivityIndicator size="large" />
-                        <Text>Researching community resources...</Text>
-                    </View>
-
                 </View>
-            )}
+            ))}
             <View className="mb-64"></View>
         </ScrollView>
     );
