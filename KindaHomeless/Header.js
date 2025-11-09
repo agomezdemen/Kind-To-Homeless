@@ -17,7 +17,7 @@ export default class Header extends Component {
     render() {
         const {search} = this.state;
         return (
-            <View className="h-32 w-full bg-emerald-900 absolute pt-12 p-4">
+            <View className="h-32 w-full bg-emerald-900 border-b-emerald-100 border-2 absolute pt-12 p-4">
                 <View></View>
                 <SearchBar
                     placeholder="Search POI's"
