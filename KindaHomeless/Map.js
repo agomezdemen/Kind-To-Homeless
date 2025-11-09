@@ -38,7 +38,7 @@ export function Map({ selectedMarker, setSelectedMarker }) {
         setRegion(initialRegion);
         
         // Determine API base host. On Android emulator use 10.0.2.2 to reach host machine. 
-        // Toilets: LINEN markers, Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
+        // Toilets: tan markers, Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
         // toilets","shower","drinking_water","water_tap","place_of_worship","social_facility","shelter","soup_kitchen","food_bank","clothing_bank","outreach","homeless_services","laundry","day_care","community_centre","social_centre","welfare"
         const apiHost = 'http://162.243.235.232:7544'
         const radiusMiles = 5;
