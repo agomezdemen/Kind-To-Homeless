@@ -43,17 +43,17 @@ async def info():
 
 
 @app.get("/nearby")
-async def nearby(latitude: float, longitude: float, radius: float, feature: str = "toilets", limit: int = 20):
+async def nearby(latitude: float, longitude: float, radius: float, feature: str = "all", limit: int = 3):
     """Return nearby facilities within the given radius (miles).
     Args:
         latitude: Latitude of the center point.
         longitude: Longitude of the center point.
         radius: Search radius in miles.
         feature: Type of feature to search for (e.g., 'toilets', 'shelter', 'drinking_water').
-                 Default is 'toilets'. See /info for available options.
-        limit: Maximum number of results to return. Default is 20.
+                 Default is 'all' which returns 3 results of each feature type. See /info for available options.
+        limit: Maximum number of results to return per feature type. Default is 3.
     Returns:
-        JSON with list of facilities (id, latitude, longitude, name, address, distance) limited by the specified limit, sorted by nearest first.
+        JSON with list of facilities (id, latitude, longitude, name, address, distance, feature_type) limited by the specified limit, sorted by nearest first.
     """
     # Map simple feature names to OSM tags
     feature_map = {
@@ -76,10 +76,10 @@ async def nearby(latitude: float, longitude: float, radius: float, feature: str 
         "welfare": [("amenity", "welfare")]
     }
 
-    if feature not in feature_map:
+    if feature != "all" and feature not in feature_map:
         return {
             "error": f"Unknown feature: {feature}",
-            "available_features": list(feature_map.keys()),
+            "available_features": list(feature_map.keys()) + ["all"],
             "hint": "Use /info endpoint to see all available features"
         }
 
@@ -89,8 +89,15 @@ async def nearby(latitude: float, longitude: float, radius: float, feature: str 
 
     # Build query parts for the requested feature (some features have multiple OSM tag combinations)
     feature_queries = []
-    for key, value in feature_map[feature]:
-        feature_queries.append(f'  nwr(around:{radius_meters},{latitude},{longitude})["{key}"="{value}"];')
+    if feature == "all":
+        # Query all feature types
+        for feature_name, tags in feature_map.items():
+            for key, value in tags:
+                feature_queries.append(f'  nwr(around:{radius_meters},{latitude},{longitude})["{key}"="{value}"];')
+    else:
+        # Query only the requested feature
+        for key, value in feature_map[feature]:
+            feature_queries.append(f'  nwr(around:{radius_meters},{latitude},{longitude})["{key}"="{value}"];')
 
     # Single query to get both the requested features AND nearby named buildings
     query = f"""[out:json];
@@ -172,11 +179,9 @@ out center tags;"""
         return {"error": "Failed to fetch data from Overpass API", "detail": str(e)}
 
     # Separate requested facilities from named places
-    facilities_list = []
+    # When feature="all", group by feature type
+    facilities_by_type = {} if feature == "all" else {"single": []}
     named_places = []
-
-    # Get the tag combinations for this feature
-    feature_tags = feature_map[feature]
 
     for el in data.get("elements", []):
         el_latitude = el.get("lat") or (el.get("center") or {}).get("lat")
@@ -186,57 +191,84 @@ out center tags;"""
 
         tags = el.get("tags", {})
 
-        # Check if it matches any of the requested feature's tag combinations
-        is_match = False
-        for key, value in feature_tags:
-            if tags.get(key) == value:
-                is_match = True
-                break
+        # Check if it matches any feature type
+        matched_feature = None
+        if feature == "all":
+            # Check against all feature types
+            for feature_name, feature_tags in feature_map.items():
+                for key, value in feature_tags:
+                    if tags.get(key) == value:
+                        matched_feature = feature_name
+                        break
+                if matched_feature:
+                    break
+        else:
+            # Check against the requested feature only
+            for key, value in feature_map[feature]:
+                if tags.get(key) == value:
+                    matched_feature = "single"
+                    break
 
-        if is_match:
+        if matched_feature:
             try:
                 d = _dist_m(latitude, longitude, float(el_latitude), float(el_longitude))
             except Exception:
                 continue
 
-            facilities_list.append({
+            if matched_feature not in facilities_by_type:
+                facilities_by_type[matched_feature] = []
+
+            facilities_by_type[matched_feature].append({
                 "id": el.get("id"),
                 "latitude": el_latitude,
                 "longitude": el_longitude,
                 "tags": tags,
-                "_d": d
+                "_d": d,
+                "feature_type": matched_feature if feature == "all" else feature
             })
         # Otherwise it's a named place
         elif tags.get("name"):
             named_places.append(el)
 
-    # Sort by distance and apply limit
-    facilities_list.sort(key=lambda x: x["_d"])  # nearest first
-
-    # Process each facility
+    # Sort each feature type by distance and apply limit per feature
     facilities = []
-    for it in facilities_list[:limit]:
-        address = await asyncio.to_thread(_reverse_geocode, it["latitude"], it["longitude"])
+    for feature_type, facilities_list in facilities_by_type.items():
+        facilities_list.sort(key=lambda x: x["_d"])  # nearest first
 
-        # Use the facility's name tag if it exists
-        tags = it.get("tags", {})
-        name = tags.get("name")
+        # Process each facility (limited per feature type)
+        for it in facilities_list[:limit]:
+            address = await asyncio.to_thread(_reverse_geocode, it["latitude"], it["longitude"])
 
-        # If no name tag, find the nearest named place
-        if not name:
-            name = _find_nearest_named_place(it["latitude"], it["longitude"], named_places)
+            # Use the facility's name tag if it exists
+            tags = it.get("tags", {})
+            name = tags.get("name")
 
-        # Final fallbacks
-        if not name:
-            name = tags.get("operator") or f"{feature.replace('_', ' ').title()}"
+            # If no name tag, find the nearest named place
+            if not name:
+                name = _find_nearest_named_place(it["latitude"], it["longitude"], named_places)
 
-        facilities.append({
-            "id": it["id"],
-            "latitude": it["latitude"],
-            "longitude": it["longitude"],
-            "name": name,
-            "address": address,
-            "distance": round(it["_d"], 3)  # Distance in miles, rounded to 3 decimals
-        })
+            # Final fallbacks
+            if not name:
+                feature_name = it["feature_type"]
+                name = tags.get("operator") or f"{feature_name.replace('_', ' ').title()}"
+
+            result = {
+                "id": it["id"],
+                "latitude": it["latitude"],
+                "longitude": it["longitude"],
+                "name": name,
+                "address": address,
+                "distance": round(it["_d"], 3)  # Distance in miles, rounded to 3 decimals
+            }
+
+            # Add feature_type field when returning "all" features
+            if feature == "all":
+                result["feature_type"] = it["feature_type"]
+
+            facilities.append(result)
+
+    # When returning all features, sort by distance across all feature types
+    if feature == "all":
+        facilities.sort(key=lambda x: x["distance"])
 
     return {"results": facilities}
