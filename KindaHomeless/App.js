@@ -6,10 +6,12 @@ import { Map } from './Map';
 import Header from './Header';
 import Navbar from './Navbar';
 import List from './List';
+import Events from './Events';
 
 export default function App() {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [selectedMarker, setSelectedMarker] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
     useEffect(() => {
         console.log(selectedMarker);
     }, [selectedMarker]);
@@ -48,9 +50,10 @@ export default function App() {
         console.log("Combined Markers Updated:", combinedMarkers);
     }, [combinedMarkers]);
     useEffect(() => {
+        console.log("Search query changed:", searchQuery);
         //call functions in Map to requery with search term.
     }, [searchQuery]);
-    const [searchQuery, setSearchQuery] = useState("");
+
   return (
       <GestureHandlerRootView style={{ flex: 1 }}>
           <View className="h-full">
@@ -60,12 +63,12 @@ export default function App() {
               />
               {selectedIndex === 0 ? (
                   <View>
-                    <Map selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} combinedMarkers={combinedMarkers} setCombinedMarkers={setCombinedMarkers} />
+                    <Map selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} combinedMarkers={combinedMarkers} setCombinedMarkers={setCombinedMarkers} search={searchQuery} />
                       <List markers={combinedMarkers} selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} />
-                    <Text className="text-emerald-900 text-2xl font-bold absolute top-32 left-2">♥︎ Kind To Homeless</Text>
+                    <Text className="text-emerald-900 text-2xl font-bold absolute top-32 left-2">Homefull</Text>
                   </View>
               ) : (
-                  <Text className="text-white text-center mt-10">Second screen content here</Text>
+                  <Events/>
               )}
               <Header onSearchChange={setSearchQuery} />
               <Navbar selectedIndex={selectedIndex} setSelectedIndex={setSelectedIndex}  />
