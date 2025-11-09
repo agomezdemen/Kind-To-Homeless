@@ -1,7 +1,8 @@
 import React, {useEffect, useRef, useState} from 'react';
 import MapView, { Marker, Callout } from 'react-native-maps';
-import { StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Text, Platform, useColorScheme } from 'react-native';
 import * as Location from 'expo-location';
+
 export function Map() {
   const mapRef = useRef(null);
   const [region, setRegion] = useState(null);
@@ -11,6 +12,7 @@ export function Map() {
   const [showerMarkers, setShowerMarkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedMarker, setSelectedMarker] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -35,7 +37,7 @@ export function Map() {
         setRegion(initialRegion);
 
         // Determine API base host. On Android emulator use 10.0.2.2 to reach host machine. 
-        // Toilets/Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
+        // Toilets: Brown markers, Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
         /*const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://127.0.0.1:8000';
         const url = `${apiHost}/nearby?lat=${latitude}&lon=${longitude}&radius=1`;
 
@@ -59,6 +61,14 @@ export function Map() {
           latitude,
           longitude,
         };
+        const foodSample = {
+          id: 'food-1',
+          title: 'food',
+          description: 'test food marker',
+          latitude: latitude + 0.0005,
+          longitude: longitude + 0.0005,
+        };
+        setFoodMarkers([foodSample]);
         setYourLocation(yourMarker); // Temporarily just show user location as marker
         // Auto-zoom tighter around user
         const zoomRegion = { ...initialRegion, latitudeDelta: 0.004, longitudeDelta: 0.004 };
