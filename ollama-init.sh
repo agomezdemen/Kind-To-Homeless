@@ -6,8 +6,8 @@ ollama serve &
 # Wait for Ollama to be ready
 sleep 10
 
-# Pull the nemotron-mini model
-ollama pull nemotron-mini
+# Pull nemotron-70B
+ollama pull nemotron:70B
 
 # Keep the container running
 wait
