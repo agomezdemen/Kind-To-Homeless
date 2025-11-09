@@ -10,6 +10,7 @@ export function Map({ selectedMarker, setSelectedMarker }) {
   const [foodMarkers, setFoodMarkers] = useState([]);
   const [shelterMarkers, setShelterMarkers] = useState([]);
   const [showerMarkers, setShowerMarkers] = useState([]);
+  const [toiletMarkers, setToiletMarkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -35,25 +36,73 @@ export function Map({ selectedMarker, setSelectedMarker }) {
         };
 
         setRegion(initialRegion);
-
+        
         // Determine API base host. On Android emulator use 10.0.2.2 to reach host machine. 
-        // Toilets: Brown markers, Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
-        /*const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://127.0.0.1:8000';
-        const url = `${apiHost}/nearby?lat=${latitude}&lon=${longitude}&radius=1`;
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const data = await res.json();
-
-        // The API currently echoes the provided lat/lon; create a single marker from it.
-        const apiMarker = { // I'll change this later to reflect real API data
-          id: 'api-1',
-          title: 'API Nearby',
-          description: `radius: ${data.radius_miles}`,
-          latitude: data.latitude,
-          longitude: data.longitude,
-        };
-        setMarkers([apiMarker]);*/
+        // Toilets: LINEN markers, Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
+        // toilets","shower","drinking_water","water_tap","place_of_worship","social_facility","shelter","soup_kitchen","food_bank","clothing_bank","outreach","homeless_services","laundry","day_care","community_centre","social_centre","welfare"
+        const apiHost = 'http://162.243.235.232:7544'
+        const radiusMiles = 5;
+        const url = `${apiHost}/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radiusMiles}`;
+        try {
+          setLoading(true);
+          // fetch toilets
+          const resToilets = await fetch(`${url}&features=toilets`);
+          if (resToilets.ok) {
+            const toiletData = await resToilets.json();
+            setToiletMarkers(toiletData.results.map((item, index) => ({
+              id: `toilet-${index}`,
+              title: item.name,
+              description: item.description,
+              latitude: item.latitude,
+              longitude: item.longitude,
+            })));
+            console.log("Toilet data fetched:", toiletData);
+          }
+          // fetch showers
+          const resShowers = await fetch(`${url}&features=showers`);
+          if (resShowers.ok) {
+            const showerData = await resShowers.json();
+            setShowerMarkers(showerData.results.map((item, index) => ({
+              id: `shower-${index}`,
+              title: item.name,
+              description: item.description,
+              latitude: item.latitude,
+              longitude: item.longitude,
+            })));
+            console.log("Shower data fetched:", showerData);
+          }
+          // fetch food
+          const resFood = await fetch(`${url}&features=food`);
+          if (resFood.ok) {
+            const foodData = await resFood.json();
+            setFoodMarkers(foodData.results.map((item, index) => ({
+              id: `food-${index}`,
+              title: item.name,
+              description: item.description,
+              latitude: item.latitude,
+              longitude: item.longitude,
+            })));
+            console.log("Food data fetched:", foodData);
+          }
+          // fetch shelters
+          const resShelters = await fetch(`${url}&features=shelters`);
+          if (resShelters.ok) {
+            const shelterData = await resShelters.json();
+            setShelterMarkers(shelterData.results.map((item, index) => ({
+              id: `shelter-${index}`,
+              title: item.name,
+              description: item.description,
+              latitude: item.latitude,
+              longitude: item.longitude,
+            })));
+            console.log("Shelter data fetched:", shelterData);
+          }
+          setLoading(false);
+        } catch (apiError) {
+          console.error('Error fetching nearby data:', apiError);
+        }
+        
+        
         const yourMarker = {
           id: 'you-1',
           title: 'You are here',
@@ -61,14 +110,6 @@ export function Map({ selectedMarker, setSelectedMarker }) {
           latitude,
           longitude,
         };
-        const foodSample = {
-          id: 'food-1',
-          title: 'food',
-          description: 'test food marker',
-          latitude: latitude + 0.0005,
-          longitude: longitude + 0.0005,
-        };
-        setFoodMarkers([foodSample]);
         setYourLocation(yourMarker); // Temporarily just show user location as marker
         // Auto-zoom tighter around user
         const zoomRegion = { ...initialRegion, latitudeDelta: 0.004, longitudeDelta: 0.004 };
@@ -143,6 +184,14 @@ export function Map({ selectedMarker, setSelectedMarker }) {
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
             pinColor='yellow'
+            onPress={() => setSelectedMarker(marker)}
+          />
+        ))}
+        {toiletMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+            pinColor='tan'
             onPress={() => setSelectedMarker(marker)}
           />
         ))}
