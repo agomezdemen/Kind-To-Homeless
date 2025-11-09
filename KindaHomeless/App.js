@@ -9,7 +9,10 @@ import Navbar from './Navbar';
 export default function App() {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [selectedMarker, setSelectedMarker] = useState(null);
-
+    const [combinedMarkers, setCombinedMarkers] = useState([]);
+    useEffect(() => {
+        console.log("Combined Markers Updated:", combinedMarkers);
+    }, [combinedMarkers]);
   return (
       <View className="h-full">
           <StatusBar
@@ -18,7 +21,7 @@ export default function App() {
           />
           {selectedIndex === 0 ? (
               <View>
-                <Map selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} />
+                <Map selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} combinedMarkers={combinedMarkers} setCombinedMarkers={setCombinedMarkers} />
                 <Text className="text-emerald-900 text-2xl font-bold absolute top-32 left-2">♥︎ Kind To Homeless</Text>
               </View>
           ) : (
