@@ -4,7 +4,7 @@ import { StyleSheet, View, ActivityIndicator, Text, Platform, useColorScheme } f
 import * as Location from 'expo-location';
 import "./global.css";
 
-export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCombinedMarkers, search }) {
+export function Map({ setUserLocation, selectedMarker, setSelectedMarker, combinedMarkers, setCombinedMarkers, search }) {
   const mapRef = useRef(null);
   const [region, setRegion] = useState(null);
   const [yourLocation, setYourLocation] = useState(null);
@@ -46,6 +46,10 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
 
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
         const { latitude, longitude } = loc.coords;
+
+      if (setUserLocation) {
+          setUserLocation({ latitude, longitude });
+      }
 
         const initialRegion = {
           latitude,
