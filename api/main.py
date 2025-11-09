@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import asyncio
 import json
 import sys
+import sys
 import os
 from math import radians, sin, cos, asin, sqrt
 from urllib import request as urlrequest
@@ -430,21 +431,22 @@ out center tags;"""
 
 
 @app.get("/search")
-async def search(query: str):
-    """Search DuckDuckGo and return top 5 result URLs.
+async def search(query: str, max_results: int = 5):
+    """Search DuckDuckGo and return top result URLs.
 
     Args:
         query: The search query string.
+        max_results: Maximum number of results to return. Default is 5.
 
     Returns:
-        JSON object with list of top 5 search result URLs.
+        JSON object with list of search result URLs.
     """
     try:
         from ddgs import DDGS
 
         def _search():
             with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=5))
+                results = list(ddgs.text(query, max_results=max_results))
                 return [{"url": r["href"], "title": r["title"]} for r in results]
 
         search_results = await asyncio.to_thread(_search)
@@ -540,18 +542,95 @@ async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
         # First replace newlines with commas, then split on commas
         response_text = response_text.replace('\n', ',')
         queries = [q.strip() for q in response_text.split(',') if q.strip()]
-
-        # Search each query and collect all URLs
-        all_urls = []
+        # Search each query and collect all URLs (10 per query)
+        all_results_by_query = {}
         for query in queries:
             # Append " November 2025" to each search query
             search_query = f"{query} November 2025"
-            search_results = await search(search_query)
+            search_results = await search(search_query, max_results=10)
             if "results" in search_results:
-                for result in search_results["results"]:
-                    all_urls.append(result["url"])
+                all_results_by_query[query] = search_results["results"]
 
-        return {"search_queries": queries, "urls": all_urls}
+        # Load URL selector prompt
+        selector_prompt_path = '/app/agentic_prompts/prompt-url-selector.txt'
+        if not os.path.exists(selector_prompt_path):
+            selector_prompt_path = os.path.join(os.path.dirname(__file__), '..', 'agentic_prompts', 'prompt-url-selector.txt')
+
+        with open(selector_prompt_path, 'r') as f:
+            selector_prompt_template = f.read()
+
+        # For each query, filter URLs using Ollama
+        def _filter_urls(query_text: str, results: list) -> list:
+            """Use Ollama to filter URLs for relevance."""
+            if not results:
+                return []
+
+            # Format URLs with titles for the prompt
+            urls_text = '\n'.join([f"{r['title']}\n{r['url']}" for r in results])
+
+            # Build the filtering prompt
+            filter_prompt = selector_prompt_template.replace('{query}', query_text)
+            filter_prompt = filter_prompt.replace('{urls}', urls_text)
+
+            payload = {
+                "model": "nemotron:70B",
+                "prompt": filter_prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.3  # Lower temperature for more focused filtering
+                }
+            }
+
+            req = urlrequest.Request(
+                ollama_url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urlrequest.urlopen(req, timeout=60) as resp:
+                body = resp.read().decode('utf-8')
+                result = json.loads(body)
+                response = result.get("response", "").strip()
+
+                # If response is "NONE", return empty list
+                if response.upper() == "NONE":
+                    return []
+
+                # Parse URLs from response (one per line)
+                filtered_urls = [line.strip() for line in response.split('\n') if line.strip() and line.strip().startswith('http')]
+
+                # Match filtered URLs back to original results to keep titles
+                filtered_results = []
+                for url in filtered_urls:
+                    for r in results:
+                        if r['url'] == url:
+                            filtered_results.append(r)
+                            break
+
+                return filtered_results
+
+        # Filter URLs for each query in parallel
+        filter_tasks = [
+            asyncio.to_thread(_filter_urls, query, results)
+            for query, results in all_results_by_query.items()
+        ]
+        filtered_results_list = await asyncio.gather(*filter_tasks)
+
+        # Combine all filtered results
+        final_urls = []
+        seen_urls = set()
+        for query, filtered_results in zip(all_results_by_query.keys(), filtered_results_list):
+            for result in filtered_results:
+                # Deduplicate URLs
+                if result['url'] not in seen_urls:
+                    seen_urls.add(result['url'])
+                    final_urls.append({
+                        "url": result['url'],
+                        "title": result['title'],
+                        "query": query
+                    })
+
+        return {"search_queries": queries, "urls": final_urls, "total_filtered": len(final_urls)}
 
     except Exception as e:
         return {"error": str(e), "type": type(e).__name__}

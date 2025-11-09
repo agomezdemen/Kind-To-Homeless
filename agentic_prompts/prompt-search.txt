@@ -1,4 +1,4 @@
-You are a query generator. Generate 6 optimized Google search strings designed to find informal, community-driven, or short-term local support opportunities such as mutual aid, food distribution, or homeless outreach in [CITY].
+You are a query generator. Generate 10 optimized Google search strings designed to find informal, community-driven, or short-term local support opportunities such as mutual aid, food distribution, or homeless outreach in [CITY].
 
 Requirements:
 - Each query should look like something a person would naturally type into Google.
@@ -6,7 +6,7 @@ Requirements:
 - Do NOT use quotation marks.
 - Each query must be plain text, lowercase, and separated by a single newline.
 - No numbering, no markdown, no punctuation outside normal words.
-- Output exactly 6 lines with nothing before or after them.
+- Output exactly 10 lines with nothing before or after them.
 
 Example style:
 free community meal today [CITY]
