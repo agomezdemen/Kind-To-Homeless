@@ -78,10 +78,15 @@ async def nearby(latitude: float, longitude: float, radius: float = 3.0, feature
 
     # Handle search parameter with Ollama
     if search:
+        import time
+        search_start = time.time()
         print(f"Search parameter received: '{search}'")
         def _query_ollama(search_string: str, features: list) -> list:
             """Query Ollama to match search string to feature names."""
-            ollama_url = "http://ollama:11434/api/generate"
+            import time
+            ollama_start = time.time()
+            ollama_host = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
+            ollama_url = f"{ollama_host}/api/generate"
 
             # Format features list clearly
             features_list = '\n'.join([f"- {f}" for f in features])
@@ -120,11 +125,21 @@ Match for "{search_string}":"""
                     headers={"Content-Type": "application/json"},
                     method="POST"
                 )
-                with urlrequest.urlopen(req, timeout=30) as resp:
+                print(f"Calling Ollama at {ollama_url}...")
+                with urlrequest.urlopen(req, timeout=60) as resp:
                     body = resp.read().decode('utf-8')
                     result = json.loads(body)
                     response_text = result.get("response", "").strip()
 
+                    ollama_elapsed = time.time() - ollama_start
+
+                    # Extract performance metrics from Ollama response
+                    eval_count = result.get("eval_count", 0)
+                    eval_duration = result.get("eval_duration", 0) / 1e9  # Convert nanoseconds to seconds
+                    tokens_per_sec = eval_count / eval_duration if eval_duration > 0 else 0
+
+                    print(f"Ollama inference time: {ollama_elapsed:.3f}s")
+                    print(f"Ollama tokens generated: {eval_count}, speed: {tokens_per_sec:.1f} tokens/s")
                     print(f"Ollama raw response: {response_text}")
 
                     # Clean up response - remove quotes, periods, and extra whitespace
@@ -159,7 +174,9 @@ Match for "{search_string}":"""
                     return valid_matches
             except Exception as e:
                 # Return empty list on error
-                print(f"Ollama error: {e}")
+                print(f"Ollama error: {type(e).__name__}: {e}")
+                import traceback
+                traceback.print_exc()
                 return []
 
         # Get matched features from Ollama
@@ -176,9 +193,14 @@ Match for "{search_string}":"""
 
         # Query each matched feature and combine results
         all_facilities = []
+        query_start = time.time()
         for matched_feature in matched_features:
-            # Recursive call to nearby with specific feature
+            feature_start = time.time()
+            print(f"Querying feature: {matched_feature} with lat={latitude}, lon={longitude}, radius={radius}, limit={limit}")
+            # Recursive call to nearby with specific feature (search=None to avoid re-matching)
             feature_results = await nearby(latitude, longitude, radius, matched_feature, limit, None)
+            feature_elapsed = time.time() - feature_start
+            print(f"Feature {matched_feature} returned {len(feature_results.get('results', []))} results in {feature_elapsed:.3f}s")
             if "results" in feature_results:
                 # Add feature_type to each result if not already present
                 for result in feature_results["results"]:
@@ -188,6 +210,11 @@ Match for "{search_string}":"""
 
         # Sort by distance and return
         all_facilities.sort(key=lambda x: x["distance"])
+        total_elapsed = time.time() - search_start
+        query_elapsed = time.time() - query_start
+        ollama_elapsed = total_elapsed - query_elapsed
+        print(f"Returning total of {len(all_facilities)} facilities from search")
+        print(f"Total search time: {total_elapsed:.3f}s (Ollama: {ollama_elapsed:.3f}s, DB queries: {query_elapsed:.3f}s)")
         return {"results": all_facilities}
 
     if feature != "all" and feature not in feature_map:
