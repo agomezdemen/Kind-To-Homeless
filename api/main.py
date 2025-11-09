@@ -13,8 +13,6 @@ async def nearby(lat: float, lon: float, radius: float):
     return {
         "latitude": lat,
         "longitude": lon,
-        "radius_miles": radius,
 
     }
-
 
