@@ -48,7 +48,32 @@ services:
     depends_on:
       - nominatim
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-genai
+    ports:
+      - "7545:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+      - ./ollama-init.sh:/ollama-init.sh
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    entrypoint: ["/bin/bash", "/ollama-init.sh"]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+
 volumes:
   nominatim-data:
   nominatim-flatnode:
+  ollama-data:
 
