@@ -4,12 +4,20 @@ import { StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-nativ
 
 import { Map } from './Map';
 import Header from './Header';
+import Navbar from './Navbar';
 
 export default function App() {
+    const [selectedIndex, setSelectedIndex] = useState(0);
+
   return (
-      <View>
-          <Map />
+      <View className="h-full">
+          {selectedIndex === 0 ? (
+              <Map />
+          ) : (
+              <Text className="text-white text-center mt-10">Second screen content here</Text>
+          )}
           <Header />
+          <Navbar selectedIndex={selectedIndex} setSelectedIndex={setSelectedIndex}  />
       </View>
   );
 }
