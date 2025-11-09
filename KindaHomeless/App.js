@@ -1,5 +1,5 @@
 import "./global.css";
-import React, {useEffect, useRef, useState} from 'react';
+import React, {use, useEffect, useRef, useState} from 'react';
 import { StatusBar, StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-native';
 
 import { Map } from './Map';
@@ -8,6 +8,7 @@ import Navbar from './Navbar';
 
 export default function App() {
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [selectedMarker, setSelectedMarker] = useState(null);
 
   return (
       <View className="h-full">
@@ -17,7 +18,7 @@ export default function App() {
           />
           {selectedIndex === 0 ? (
               <View>
-                <Map />
+                <Map selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} />
                 <Text className="text-emerald-900 text-2xl font-bold absolute top-32 left-2">♥︎ Kind To Homeless</Text>
               </View>
           ) : (
