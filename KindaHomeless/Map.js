@@ -7,14 +7,8 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
   const mapRef = useRef(null);
   const [region, setRegion] = useState(null);
   const [yourLocation, setYourLocation] = useState(null);
-  const [foodMarkers, setFoodMarkers] = useState([]);
-  const [shelterMarkers, setShelterMarkers] = useState([]);
-  const [showerMarkers, setShowerMarkers] = useState([]);
-  const [toiletMarkers, setToiletMarkers] = useState([]);
-  const [drinkingWaterMarkers, setDrinkingWaterMarkers] = useState([]); // aqua
-  const [clothesMarkers, setClothesMarkers] = useState([]); // purple
+
   // const [placeOfWorshipMarkers, setPlaceOfWorshipMarkers] = useState([]); // plum
-  const [welfareMarkers, setWelfareMarkers] = useState([]); // navy
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -47,168 +41,23 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
         const radiusMiles = 3;
         const url = `${apiHost}/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radiusMiles}`;
         try {
-          // fetch toilets
-          const resToilets = await fetch(`${url}&feature=toilets`);
-          //console.log("Fetching toilets from:", `${url}&feature=toilets`);
-          if (resToilets.ok) {
-            const toiletData = await resToilets.json();
-            if(toiletData !== undefined && toiletData.results){
-              setToiletMarkers(toiletData.results.map((item, index) => ({
-                id: `toilet-${index}`,
+
+          const resAll = await fetch(`${url}`);
+          if (resAll.ok) {
+            const allData = await resAll.json();
+            if(allData !== undefined && allData.results){
+              setCombinedMarkers(allData.results.map((item, index) => ({
+                id: `all-${index}`,
                 name: item.name,
-                description: item.description,
+                feature_type: item.feature_type,
                 latitude: item.latitude,
                 longitude: item.longitude,
+                distance: item.distance,
+                address: item.address
               })));
             }
-            console.log("Toilet data fetched:", toiletData);
-          }
-          // fetch showers
-          const resShowers = await fetch(`${url}&feature=shower`);
-          if (resShowers.ok) {
-            const showerData = await resShowers.json();
-            if(showerData !== undefined && showerData.results){
-              setShowerMarkers(showerData.results.map((item, index) => ({
-                id: `shower-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              })));
-            }
-            console.log("Shower data fetched:", showerData);
-          }
-          // fetch food
-          const resFood = await fetch(`${url}&feature=food_bank`);
-          if (resFood.ok) {
-            const foodData = await resFood.json();
-            if(foodData !== undefined && foodData.results){
-              setFoodMarkers(foodData.results.map((item, index) => ({
-                id: `food-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              })));
-            }
-            console.log("Food data fetched:", foodData);
-          }
-          const resSoupKitchens = await fetch(`${url}&feature=soup_kitchen`);
-          if (resSoupKitchens.ok) {
-            const soupKitchenData = await resSoupKitchens.json();
-            if(soupKitchenData !== undefined && soupKitchenData.results){
-              setFoodMarkers(prev => [...prev, ...soupKitchenData.results.map((item, index) => ({
-                id: `soup_kitchen-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              }))]);
-            }
-            console.log("Soup Kitchen data fetched:", soupKitchenData);
-          }
-          // const resSocialcenters = await fetch(`${url}&feature=social_centre`);
-          // if (resSocialcenters.ok) {
-          //   const socialcenterData = await resSocialcenters.json();
-          //   if(socialcenterData !== undefined && socialcenterData.results){
-          //     setShelterMarkers(prev => [...prev, ...socialcenterData.results.map((item, index) => ({
-          //       id: `social_centre-${index}`,
-          //       name: item.name,
-          //       description: item.description,
-          //       latitude: item.latitude,
-          //       longitude: item.longitude,
-          //     }))]);
-          //   }
-          // }
-          const resSocialFacility = await fetch(`${url}&feature=social_facility`);
-          if (resSocialFacility.ok) {
-            const socialFacilityData = await resSocialFacility.json();
-            if(socialFacilityData !== undefined && socialFacilityData.results){
-              setShelterMarkers(prev => [...prev, ...socialFacilityData.results.map((item, index) => ({
-                id: `social_facility-${index+1}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              }))]);
-            }
-            console.log("Social Facility data fetched:", socialFacilityData);
-          }
-          
-          const resHomelessServices = await fetch(`${url}&feature=homeless_services`);
-          if (resHomelessServices.ok) {
-            const homelessServicesData = await resHomelessServices.json();
-            if(homelessServicesData !== undefined && homelessServicesData.results){
-              setShelterMarkers(prev => [...prev, ...homelessServicesData.results.map((item, index) => ({
-                id: `homeless_services-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              }))]);
-            }
-            console.log("Homeless Services data fetched:", homelessServicesData);
-          }
-          
-          const resDrinkingWater = await fetch(`${url}&feature=drinking_water`);
-          if (resDrinkingWater.ok) {
-            const drinkingWaterData = await resDrinkingWater.json();
-            if(drinkingWaterData !== undefined && drinkingWaterData.results){
-              setDrinkingWaterMarkers(drinkingWaterData.results.map((item, index) => ({
-                id: `drinking_water-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              })));
-            }
-             console.log("Drinking Water data fetched:", drinkingWaterData);
-          }
-        
-          const resWaterTaps = await fetch(`${url}&feature=water_tap`);
-          if (resWaterTaps.ok) {
-            const waterTapData = await resWaterTaps.json();
-            if(waterTapData !== undefined && waterTapData.results){
-              setDrinkingWaterMarkers(prev => [...prev, ...waterTapData.results.map((item, index) => ({
-                id: `water_tap-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              }))]);
-            }
-            console.log("Water Tap data fetched:", waterTapData);
-          }
-          
-          const resClothingBanks = await fetch(`${url}&feature=clothing_bank`);
-          if (resClothingBanks.ok) {
-            const clothingBankData = await resClothingBanks.json();
-            if(clothingBankData !== undefined && clothingBankData.results){
-              setClothesMarkers(clothingBankData.results.map((item, index) => ({
-                id: `clothing_bank-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              })));
-            }
-          console.log("Clothing Bank data fetched:", clothingBankData);
-          }
-          
-          const resLaundries = await fetch(`${url}&feature=laundry`);
-          if (resLaundries.ok) {
-            const laundryData = await resLaundries.json();
-            if(laundryData !== undefined && laundryData.results){
-              setClothesMarkers(prev => [...prev, ...laundryData.results.map((item, index) => ({
-                id: `laundry-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              }))]);
-            }
-            console.log("Laundry data fetched:", laundryData);
-          }
+            console.log(allData)
+          }          
           
           // const resPlaceOfWorship = await fetch(`${url}&feature=place_of_worship`);
           // if (resPlaceOfWorship.ok) {
@@ -223,51 +72,6 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
           //     })));
           //   }
           // }
-          const resWelfare = await fetch(`${url}&feature=welfare`);
-          if (resWelfare.ok) {
-            const welfareData = await resWelfare.json();
-            if(welfareData !== undefined && welfareData.results){
-              setWelfareMarkers(welfareData.results.map((item, index) => ({
-                id: `welfare-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              })));
-            }
-            console.log("Welfare data fetched:", welfareData);
-          }
-          
-          const resOutreach = await fetch(`${url}&feature=outreach`);
-          if (resOutreach.ok) {
-            const outreachData = await resOutreach.json();
-            if(outreachData !== undefined && outreachData.results){
-              setWelfareMarkers(prev => [...prev, ...outreachData.results.map((item, index) => ({
-                id: `outreach-${index}`,
-                name: item.name,
-                description: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              }))]);
-            }
-            console.log("Outreach data fetched:", outreachData);
-          }
-          
-          const resAll = await fetch(`${url}&feature=all`);
-          if (resAll.ok) {
-            const allData = await resAll.json();
-            if(allData !== undefined && allData.results){
-              setCombinedMarkers(allData.results.map((item, index) => ({
-                id: `all-${index}`,
-                name: item.name,
-                feature_type: item.description,
-                latitude: item.latitude,
-                longitude: item.longitude,
-                distance: item.distance,
-                address: item.address
-              })));
-            }
-          }
         } catch (apiError) {
           console.error('Error fetching nearby data:', apiError);
         }
@@ -329,7 +133,11 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             
             </Marker>
           )}
-        {shelterMarkers.map((marker) => (
+        {combinedMarkers.filter(marker=>
+        marker.feature_type==="social_centre" ||
+        marker.feature_type==="social_facility" ||
+        marker.feature_type==="homeless_services"
+        ).map((marker) => (
           <Marker
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
@@ -337,7 +145,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             onPress={() => setSelectedMarker(marker)}
           />
         ))}
-        {showerMarkers.map((marker) => (
+        {combinedMarkers.filter((marker)=>marker.feature_type === "shower").map((marker) => (
           <Marker
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
@@ -345,7 +153,10 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             onPress={() => setSelectedMarker(marker)}
           />
         ))}
-        {foodMarkers.map((marker) => (
+        {combinedMarkers.filter(marker=>
+        marker.feature_type=== "food_bank" ||
+        marker.feature_type==="soup_kitchen"
+        ).map((marker) => (
           <Marker
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
@@ -353,7 +164,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             onPress={() => setSelectedMarker(marker)}
           />
         ))}
-        {toiletMarkers.map((marker) => (
+        {combinedMarkers.filter((marker)=>(marker.feature_type === "toilets")).map((marker) => (
           <Marker
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
@@ -361,7 +172,10 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             onPress={() => setSelectedMarker(marker)}
           />
         ))}
-        {drinkingWaterMarkers.map((marker) => (
+        {combinedMarkers.filter(marker=>
+        marker.feature_type==="drinking_water" ||
+        marker.feature_type==="water_tap"
+        ).map((marker) => (
           <Marker
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
@@ -369,7 +183,10 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             onPress={() => setSelectedMarker(marker)}
           />
         ))}
-        {clothesMarkers.map((marker) => (
+        {combinedMarkers.filter(marker=>
+        marker.feature_type==="clothing_bank"|| 
+        marker.feature_type==="laundry"
+        ).map((marker) => (
           <Marker
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
@@ -385,7 +202,10 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             onPress={() => setSelectedMarker(marker)}
           />
         ))} */}
-        {welfareMarkers.map((marker) => (
+        {combinedMarkers.filter(marker=>
+        marker.feature_type==="welfare"||
+        marker.feature_type==="outreach"
+        ).map((marker) => (
           <Marker
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
