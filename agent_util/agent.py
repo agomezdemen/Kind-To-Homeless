@@ -1,48 +1,17 @@
 # agent.py
 import json, requests
-from scrape_utils import get_html, extract_links, find_terms, extract_contacts  # whatever you wrote
+import scrape_utils as su
+from tools import TOOLS
 
 VLLM_URL = "http://localhost:8000/v1/chat/completions"
 MODEL    = "nvidia/Llama-3_3-Nemotron-Super-49B-v1_5"
 
-TOOLS = [
-  {
-    "type": "function",
-    "function": {
-      "name": "get_html",
-      "description": "Fetch raw HTML for a URL.",
-      "parameters": {
-        "type": "object",
-        "properties": { "url": {"type":"string"} },
-        "required": ["url"]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "find_terms",
-      "description": "Search HTML for case-insensitive terms and return snippets.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "html": {"type":"string"},
-          "terms": {"type":"array","items":{"type":"string"}}
-        },
-        "required": ["html","terms"]
-      }
-    }
-  },
-  # add other tiny utilities here (extract_links, extract_contacts, etc)
-]
-
 def call_tool(name, arguments):
-  if name == "get_html":
-    return get_html(**arguments)                 # e.g. {"url": "..."}
-  if name == "find_terms":
-    return find_terms(**arguments)               # e.g. {"html": "...", "terms": ["shelter","meals"]}
-  # map other tool names -> your functions here
-  raise ValueError(f"Unknown tool: {name}")
+  fn = getattr(su, name, None)
+  if fn is None:
+    raise ValueError(f"Unknown tool: {name}")
+
+  return fn(**(arguments or {}))
 
 def chat(messages):
   payload = {
