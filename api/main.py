@@ -486,7 +486,8 @@ async def agent(url: str):
             SYSTEM_PROMPT = f.read()
 
         # Use ollama service with OpenAI-compatible endpoint
-        OLLAMA_URL = "http://ollama:11434/v1/chat/completions"
+        ollama_host = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
+        OLLAMA_URL = f"{ollama_host}/v1/chat/completions"
         MODEL = "nemotron:70B"  # Use the model name that's actually loaded in Ollama
 
         def call_tool(name, arguments):
