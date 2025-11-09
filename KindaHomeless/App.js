@@ -1,5 +1,5 @@
 import "./global.css";
-import React, {useEffect, useRef, useState} from 'react';
+import React, {use, useEffect, useRef, useState} from 'react';
 import { StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-native';
 
 import { Map } from './Map';
@@ -8,11 +8,12 @@ import Navbar from './Navbar';
 
 export default function App() {
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [selectedMarker, setSelectedMarker] = useState(null);
 
   return (
       <View className="h-full">
           {selectedIndex === 0 ? (
-              <Map />
+              <Map selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} />
           ) : (
               <Text className="text-white text-center mt-10">Second screen content here</Text>
           )}

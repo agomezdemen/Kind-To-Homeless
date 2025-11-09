@@ -3,7 +3,7 @@ import MapView, { Marker, Callout } from 'react-native-maps';
 import { StyleSheet, View, ActivityIndicator, Text, Platform, useColorScheme } from 'react-native';
 import * as Location from 'expo-location';
 
-export function Map() {
+export function Map({ selectedMarker, setSelectedMarker }) {
   const mapRef = useRef(null);
   const [region, setRegion] = useState(null);
   const [yourLocation, setYourLocation] = useState(null);
@@ -12,7 +12,7 @@ export function Map() {
   const [showerMarkers, setShowerMarkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedMarker, setSelectedMarker] = useState(null);
+
 
   useEffect(() => {
     (async () => {
@@ -86,27 +86,6 @@ export function Map() {
   }, []);
 
 
-  const handleMapPress = (e) => {// replace the Pin text thing with eleven labs api call later
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    if(foodMarkers.includes(m => m.latitude === latitude && m.longitude === longitude)) {
-      const select = foodMarkers.at(foodMarkers.findIndex(m => m.latitude === latitude && m.longitude === longitude))
-      //add request to eleven labs here
-      setSelectedMarker(select);
-    } else if(shelterMarkers.includes(m => m.latitude === latitude && m.longitude === longitude)) {
-      const select = shelterMarkers.at(shelterMarkers.findIndex(m => m.latitude === latitude && m.longitude === longitude))
-      //add request to eleven labs here
-      setSelectedMarker(select);
-    } else if(showerMarkers.includes(m => m.latitude === latitude && m.longitude === longitude)) {
-      const select = showerMarkers.at(showerMarkers.findIndex(m => m.latitude === latitude && m.longitude === longitude))
-      //add request to eleven labs here
-      setSelectedMarker(select);
-    } else if(yourLocation && yourLocation.latitude === latitude && yourLocation.longitude === longitude) {
-      //add request to eleven labs here
-      setSelectedMarker(yourLocation);
-    }
-    //const id = String(Date.now());
-    //setMarkers((prev) => [...prev, { id, title: 'Pinned', description: 'User placed', latitude, longitude }]);
-  };
 
   if (loading) { // Grayson do your UI magic here for the loading state
     return (
@@ -132,13 +111,13 @@ export function Map() {
         ref={mapRef}
         style={{width: '100%', height: '100%'}}
         initialRegion={region}
-        onPress={handleMapPress}
       >
           {yourLocation && (
             <Marker
               key={yourLocation.id}
               coordinate={{ latitude: yourLocation.latitude, longitude: yourLocation.longitude }}
               //pinColor='blue'
+              onPress={() => setSelectedMarker(yourLocation)}
             >
             
             </Marker>
@@ -148,6 +127,7 @@ export function Map() {
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
             pinColor='green'
+            onPress={() => setSelectedMarker(marker)}
           />
         ))}
         {showerMarkers.map((marker) => (
@@ -155,6 +135,7 @@ export function Map() {
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
             pinColor='blue'
+            onPress={() => setSelectedMarker(marker)}
           />
         ))}
         {foodMarkers.map((marker) => (
@@ -162,6 +143,7 @@ export function Map() {
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
             pinColor='yellow'
+            onPress={() => setSelectedMarker(marker)}
           />
         ))}
       </MapView>
