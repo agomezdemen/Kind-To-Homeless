@@ -198,19 +198,24 @@ def html_to_text(html: str) -> str:
     return re.sub(r"\s+", " ", clean).strip()
 
 
-def extract_links(html: str, base: str, allow_external: bool = True) -> List[str]:
+def extract_links(html: str, base: Optional[str] = None, allow_external: bool = True) -> List[str]:
     """
-    Extract absolute <a href> links. Minimal parser using regex.
+    Extract absolute <a href> links. If base is None, only absolute http(s) links are returned.
     """
     links = []
     for h in _RE_HREF.findall(html):
-        u = normalize_url(base, h)
+        if base:
+            u = normalize_url(base, h)
+        else:
+            # If no base is provided, keep only absolute http(s) links.
+            u = h if is_http_url(h) else None
         if not u:
             continue
-        if not allow_external and not same_domain(base, u):
+        if base and not allow_external and not same_domain(base, u):
             continue
         links.append(canonicalize_url(u))
     return dedupe_preserve_order(links)
+
 
 
 def filter_links(
@@ -342,3 +347,36 @@ if __name__ == "__main__":
     data = crawl_once(test_url, terms=["example", "contact"], session=s)
     from pprint import pprint
     pprint(data)
+
+def wp_search_pages(
+    base_url: str,
+    query: str,
+    per_page: int = 10,
+    timeout: int = 15,
+    session: Optional[requests.Session] = None,
+) -> Dict[str, Any]:
+    """
+    Query a WordPress site's REST API for pages matching `query`.
+    Returns {ok, results:[{title,url}], status?}.
+    """
+    s = _ensure_session(session)
+    api = urljoin(base_url, "/wp-json/wp/v2/search")
+    params = {"search": query, "subtype": "page", "per_page": per_page}
+    try:
+        r = s.get(api, params=params, timeout=timeout)
+    except requests.RequestException as e:
+        return {"ok": False, "error": str(e), "results": []}
+    if r.status_code >= 400:
+        return {"ok": False, "status": r.status_code, "results": []}
+    out = []
+    try:
+        for item in r.json():
+            url = item.get("url")
+            if url:
+                out.append({
+                    "title": item.get("title", ""),
+                    "url": canonicalize_url(url),
+                })
+    except ValueError:
+        return {"ok": False, "status": r.status_code, "results": []}
+    return {"ok": True, "results": out}

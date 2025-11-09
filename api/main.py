@@ -32,8 +32,6 @@ async def info():
             {"feature": "outreach", "description": "Outreach services"},
             {"feature": "homeless_services", "description": "Services specifically for homeless"},
             {"feature": "laundry", "description": "Laundromats"},
-            {"feature": "public_bath", "description": "Public baths"},
-            {"feature": "day_care", "description": "Day care facilities"},
             {"feature": "community_centre", "description": "Community centres"},
             {"feature": "social_centre", "description": "Social centres"},
             {"feature": "welfare", "description": "Welfare services"}
@@ -43,15 +41,16 @@ async def info():
 
 
 @app.get("/nearby")
-async def nearby(latitude: float, longitude: float, radius: float, feature: str = "all", limit: int = 3):
+async def nearby(latitude: float, longitude: float, radius: float = 3.0, feature: str = "all", limit: int = 3, search: str = None):
     """Return nearby facilities within the given radius (miles).
     Args:
         latitude: Latitude of the center point.
         longitude: Longitude of the center point.
-        radius: Search radius in miles.
+        radius: Search radius in miles. Default is 3 miles.
         feature: Type of feature to search for (e.g., 'toilets', 'shelter', 'drinking_water').
                  Default is 'all' which returns 3 results of each feature type. See /info for available options.
         limit: Maximum number of results to return per feature type. Default is 3.
+        search: Optional natural language search string. If provided, uses AI to match the search to relevant features.
     Returns:
         JSON with list of facilities (id, latitude, longitude, name, address, distance, feature_type) limited by the specified limit, sorted by nearest first.
     """
@@ -71,10 +70,123 @@ async def nearby(latitude: float, longitude: float, radius: float, feature: str 
         "homeless_services": [("social_facility:for", "homeless")],
         "laundry": [("shop", "laundry"), ("amenity", "lavoir")],
         "day_care": [("social_facility", "day_care")],
-        "community_centre": [("amenity", "community_centre"), ("social_facility", "community_centre")],
         "social_centre": [("amenity", "social_centre")],
         "welfare": [("amenity", "welfare")]
     }
+
+    # Handle search parameter with Ollama
+    if search:
+        print(f"Search parameter received: '{search}'")
+        def _query_ollama(search_string: str, features: list) -> list:
+            """Query Ollama to match search string to feature names."""
+            ollama_url = "http://ollama:11434/api/generate"
+
+            # Format features list clearly
+            features_list = '\n'.join([f"- {f}" for f in features])
+
+            prompt = f"""Match "{search_string}" to features from this list. Return ONLY exact feature names.
+
+Available features:
+{features_list}
+
+Rules:
+- Return exact names only (with underscores like food_bank)
+- Multiple matches: separate with comma
+- No quotes, no extra words, no punctuation at end
+
+Examples:
+Search: bathroom → toilets
+Search: wash → shower
+Search: food → food_bank, soup_kitchen
+Search: sleep → shelter
+
+Match for "{search_string}":"""
+
+            payload = {
+                "model": "nemotron:70B",
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.1
+                }
+            }
+
+            try:
+                req = urlrequest.Request(
+                    ollama_url,
+                    data=json.dumps(payload).encode('utf-8'),
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
+                with urlrequest.urlopen(req, timeout=30) as resp:
+                    body = resp.read().decode('utf-8')
+                    result = json.loads(body)
+                    response_text = result.get("response", "").strip()
+
+                    print(f"Ollama raw response: {response_text}")
+
+                    # Clean up response - remove quotes, periods, and extra whitespace
+                    response_text = response_text.replace('"', '').replace("'", "")
+                    # Take only the first line if multiple lines
+                    response_text = response_text.split('\n')[0].strip()
+                    # Remove any trailing period
+                    response_text = response_text.rstrip('.')
+
+                    # Parse comma-separated feature names
+                    matched_features = [f.strip() for f in response_text.split(',') if f.strip()]
+
+                    # Filter to only valid features - handle plurals and close matches
+                    valid_matches = []
+                    for matched in matched_features:
+                        # Exact match first
+                        if matched in features:
+                            valid_matches.append(matched)
+                        # Try removing 's' for plural
+                        elif matched.endswith('s') and matched[:-1] in features:
+                            valid_matches.append(matched[:-1])
+                        # Try adding underscore variations
+                        elif matched.replace(' ', '_') in features:
+                            valid_matches.append(matched.replace(' ', '_'))
+
+                    # Remove duplicates while preserving order
+                    valid_matches = list(dict.fromkeys(valid_matches))
+
+                    print(f"Cleaned response: {response_text}")
+                    print(f"Matched features after filtering: {valid_matches}")
+
+                    return valid_matches
+            except Exception as e:
+                # Return empty list on error
+                print(f"Ollama error: {e}")
+                return []
+
+        # Get matched features from Ollama
+        available_features = list(feature_map.keys())
+        print(f"About to query Ollama with search: '{search}', available features: {len(available_features)}")
+        matched_features = await asyncio.to_thread(_query_ollama, search, available_features)
+
+        print(f"Ollama returned matched features: {matched_features}")
+
+        # If no features matched, return empty results
+        if not matched_features:
+            print("No features matched, returning empty results")
+            return {"results": []}
+
+        # Query each matched feature and combine results
+        all_facilities = []
+        for matched_feature in matched_features:
+            # Recursive call to nearby with specific feature
+            feature_results = await nearby(latitude, longitude, radius, matched_feature, limit, None)
+            if "results" in feature_results:
+                # Add feature_type to each result if not already present
+                for result in feature_results["results"]:
+                    if "feature_type" not in result:
+                        result["feature_type"] = matched_feature
+                all_facilities.extend(feature_results["results"])
+
+        # Sort by distance and return
+        all_facilities.sort(key=lambda x: x["distance"])
+        return {"results": all_facilities}
 
     if feature != "all" and feature not in feature_map:
         return {
@@ -258,12 +370,9 @@ out center tags;"""
                 "longitude": it["longitude"],
                 "name": name,
                 "address": address,
-                "distance": round(it["_d"], 3)  # Distance in miles, rounded to 3 decimals
+                "distance": round(it["_d"], 3),  # Distance in miles, rounded to 3 decimals
+                "feature_type": it["feature_type"]
             }
-
-            # Add feature_type field when returning "all" features
-            if feature == "all":
-                result["feature_type"] = it["feature_type"]
 
             facilities.append(result)
 
