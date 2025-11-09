@@ -11,6 +11,37 @@ export default function App() {
     const [selectedMarker, setSelectedMarker] = useState(null);
     const [combinedMarkers, setCombinedMarkers] = useState([]);
     useEffect(() => {
+        (async () => {
+          
+            // Determine API base host. On Android emulator use 10.0.2.2 to reach host machine. 
+            // Toilets: tan markers, Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
+            // "place_of_worship","outreach","welfare"
+            const apiHost = 'http://162.243.235.232:7544'
+            const radiusMiles = 3;
+            const url = `${apiHost}/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radiusMiles}`;
+            try {
+    
+              const resAll = await fetch(`${url}`);
+              if (resAll.ok) {
+                const allData = await resAll.json();
+                if(allData !== undefined && allData.results){
+                  setCombinedMarkers(allData.results.map((item, index) => ({
+                    id: `all-${index}`,
+                    name: item.name,
+                    feature_type: item.feature_type,
+                    latitude: item.latitude,
+                    longitude: item.longitude,
+                    distance: item.distance,
+                    address: item.address
+                  })));
+                }
+                console.log(allData)
+              }          
+              
+            } catch (apiError) {
+              console.error('Error fetching nearby data:', apiError);
+            }})})
+    useEffect(() => {
         console.log("Combined Markers Updated:", combinedMarkers);
     }, [combinedMarkers]);
   return (
