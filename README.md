@@ -1,1 +1,1 @@
-# Kinda-To-Homeless
+# Kind-To-Homeless
