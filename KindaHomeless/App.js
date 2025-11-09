@@ -7,12 +7,17 @@ import Header from './Header';
 import Navbar from './Navbar';
 
 export default function App() {
+    const [selectedIndex, setSelectedIndex] = useState(0);
 
   return (
       <View className="h-full">
-          <Map />
+          {selectedIndex === 0 ? (
+              <Map />
+          ) : (
+              <Text className="text-white text-center mt-10">Second screen content here</Text>
+          )}
           <Header />
-          <Navbar />
+          <Navbar selectedIndex={selectedIndex} setSelectedIndex={setSelectedIndex}  />
       </View>
   );
 }

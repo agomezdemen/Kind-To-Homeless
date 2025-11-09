@@ -5,8 +5,8 @@ import { Icon } from '@rneui/themed';
 import React, {Component, useState} from "react";
 import "./global.css";
 
-export default function Navbar() {
-    const [selectedIndex, setSelectedIndex] = useState(0);
+export default function Navbar({selectedIndex, setSelectedIndex}) {
+    //const [selectedIndex, setSelectedIndex] = useState(0);
         return (
             <View className="h-24 w-full bg-emerald-900 border-t-emerald-100 border-2 absolute pb-2 bottom-0">
                 <ButtonGroup
