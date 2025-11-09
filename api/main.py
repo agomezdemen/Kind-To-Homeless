@@ -32,7 +32,6 @@ async def info():
             {"feature": "outreach", "description": "Outreach services"},
             {"feature": "homeless_services", "description": "Services specifically for homeless"},
             {"feature": "laundry", "description": "Laundromats"},
-            {"feature": "day_care", "description": "Day care facilities"},
             {"feature": "community_centre", "description": "Community centres"},
             {"feature": "social_centre", "description": "Social centres"},
             {"feature": "welfare", "description": "Welfare services"}
@@ -42,12 +41,12 @@ async def info():
 
 
 @app.get("/nearby")
-async def nearby(latitude: float, longitude: float, radius: float, feature: str = "all", limit: int = 3, search: str = None):
+async def nearby(latitude: float, longitude: float, radius: float = 3.0, feature: str = "all", limit: int = 3, search: str = None):
     """Return nearby facilities within the given radius (miles).
     Args:
         latitude: Latitude of the center point.
         longitude: Longitude of the center point.
-        radius: Search radius in miles.
+        radius: Search radius in miles. Default is 3 miles.
         feature: Type of feature to search for (e.g., 'toilets', 'shelter', 'drinking_water').
                  Default is 'all' which returns 3 results of each feature type. See /info for available options.
         limit: Maximum number of results to return per feature type. Default is 3.
@@ -71,7 +70,6 @@ async def nearby(latitude: float, longitude: float, radius: float, feature: str 
         "homeless_services": [("social_facility:for", "homeless")],
         "laundry": [("shop", "laundry"), ("amenity", "lavoir")],
         "day_care": [("social_facility", "day_care")],
-        "community_centre": [("amenity", "community_centre"), ("social_facility", "community_centre")],
         "social_centre": [("amenity", "social_centre")],
         "welfare": [("amenity", "welfare")]
     }
