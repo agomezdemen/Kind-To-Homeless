@@ -59,19 +59,6 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             console.log(allData)
           }          
           
-          // const resPlaceOfWorship = await fetch(`${url}&feature=place_of_worship`);
-          // if (resPlaceOfWorship.ok) {
-          //   const placeOfWorshipData = await resPlaceOfWorship.json();
-          //   if(placeOfWorshipData !== undefined && placeOfWorshipData.results){
-          //     setPlaceOfWorshipMarkers(placeOfWorshipData.results.map((item, index) => ({
-          //       id: `place_of_worship-${index}`,
-          //       name: item.name,
-          //       description: item.description,
-          //       latitude: item.latitude,
-          //       longitude: item.longitude,
-          //     })));
-          //   }
-          // }
         } catch (apiError) {
           console.error('Error fetching nearby data:', apiError);
         }
@@ -194,14 +181,14 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
             onPress={() => setSelectedMarker(marker)}
           />
         ))}
-        {/* {placeOfWorshipMarkers.map((marker) => (
+        { combinedMarkers.filter(marker=>marker.feature_type==="place_of_worship").map((marker) => (
           <Marker
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
             pinColor='plum'
             onPress={() => setSelectedMarker(marker)}
           />
-        ))} */}
+        ))} 
         {combinedMarkers.filter(marker=>
         marker.feature_type==="welfare"||
         marker.feature_type==="outreach"
