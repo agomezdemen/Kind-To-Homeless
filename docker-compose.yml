@@ -47,6 +47,7 @@ services:
     volumes:
       - ./api:/app/api
       - ./agent_util:/app/agent_util
+      - ./agentic_prompts:/app/agentic_prompts
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - OLLAMA_HOST=http://host.docker.internal:11434
