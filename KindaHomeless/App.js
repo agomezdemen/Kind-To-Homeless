@@ -1,14 +1,18 @@
 import "./global.css";
 import React, {use, useEffect, useRef, useState} from 'react';
 import { StatusBar, StyleSheet, View, ActivityIndicator, Text, Platform } from 'react-native';
-
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Map } from './Map';
 import Header from './Header';
 import Navbar from './Navbar';
+import List from './List';
 
 export default function App() {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [selectedMarker, setSelectedMarker] = useState(null);
+    useEffect(() => {
+        console.log(selectedMarker);
+    }, [selectedMarker]);
     const [combinedMarkers, setCombinedMarkers] = useState([]);
     const combined = async () => {
           
@@ -43,22 +47,29 @@ export default function App() {
     useEffect(() => {
         console.log("Combined Markers Updated:", combinedMarkers);
     }, [combinedMarkers]);
+    useEffect(() => {
+        //call functions in Map to requery with search term.
+    }, [searchQuery]);
+    const [searchQuery, setSearchQuery] = useState("");
   return (
-      <View className="h-full">
-          <StatusBar
-              backgroundColor="black" // Or any dark color for the status bar background
-              barStyle="light-content" // This makes the icons and text white
-          />
-          {selectedIndex === 0 ? (
-              <View>
-                <Map selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} combinedMarkers={combinedMarkers} setCombinedMarkers={setCombinedMarkers} />
-                <Text className="text-emerald-900 text-2xl font-bold absolute top-32 left-2">♥︎ Kind To Homeless</Text>
-              </View>
-          ) : (
-              <Text className="text-white text-center mt-10">Second screen content here</Text>
-          )}
-          <Header />
-          <Navbar selectedIndex={selectedIndex} setSelectedIndex={setSelectedIndex}  />
-      </View>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+          <View className="h-full">
+              <StatusBar
+                  backgroundColor="black" // Or any dark color for the status bar background
+                  barStyle="light-content" // This makes the icons and text white
+              />
+              {selectedIndex === 0 ? (
+                  <View>
+                    <Map selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} combinedMarkers={combinedMarkers} setCombinedMarkers={setCombinedMarkers} />
+                      <List markers={combinedMarkers} selectedMarker={selectedMarker} setSelectedMarker={setSelectedMarker} />
+                    <Text className="text-emerald-900 text-2xl font-bold absolute top-32 left-2">♥︎ Kind To Homeless</Text>
+                  </View>
+              ) : (
+                  <Text className="text-white text-center mt-10">Second screen content here</Text>
+              )}
+              <Header onSearchChange={setSearchQuery} />
+              <Navbar selectedIndex={selectedIndex} setSelectedIndex={setSelectedIndex}  />
+          </View>
+      </GestureHandlerRootView>
   );
 }
