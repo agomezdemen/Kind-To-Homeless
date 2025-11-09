@@ -12,15 +12,17 @@ export default class Header extends Component {
 
     updateSearch = (search) => {
         this.setState({ search });
+        if (this.props.onSearchChange) {
+            this.props.onSearchChange(search);
+        }
     };
 
     render() {
         const {search} = this.state;
         return (
-            <View className="h-32 w-full bg-emerald-900 border-b-emerald-400 border-b-2 absolute pt-12 p-4">
-                <View></View>
+            <View className="h-32 w-full bg-emerald-900  border-b-emerald-400 border-b-2 absolute pt-12 p-4">
                 <SearchBar
-                    placeholder="Search POI's"
+                    placeholder="Search points of interest..."
                     onChangeText={this.updateSearch}
                     value={search}
                     platform="android"

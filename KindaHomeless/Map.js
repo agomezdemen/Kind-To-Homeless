@@ -1,7 +1,8 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState, useCallback} from 'react';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { StyleSheet, View, ActivityIndicator, Text, Platform, useColorScheme } from 'react-native';
 import * as Location from 'expo-location';
+import "./global.css";
 
 export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCombinedMarkers }) {
   const mapRef = useRef(null);
@@ -11,6 +12,25 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
   // const [placeOfWorshipMarkers, setPlaceOfWorshipMarkers] = useState([]); // plum
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+    const animateToMarker = useCallback((marker) => {
+        if (mapRef.current && marker) {
+            const region = {
+                latitude: marker.latitude,
+                longitude: marker.longitude,
+                latitudeDelta: 0.004,
+                longitudeDelta: 0.004,
+            };
+            mapRef.current.animateToRegion(region, 800);
+        }
+    }, []);
+
+    // Call this when selectedMarker changes
+    useEffect(() => {
+        if (selectedMarker) {
+            animateToMarker(selectedMarker);
+        }
+    }, [selectedMarker, animateToMarker]);
 
   useEffect(() => {
     (async () => {
@@ -57,8 +77,8 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
               })));
             }
             console.log(allData)
-          }          
-          
+          }
+
         } catch (apiError) {
           console.error('Error fetching nearby data:', apiError);
         }
@@ -87,12 +107,14 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
   }, []);
 
   if (loading) { // Grayson do your UI magic here for the loading state
-    return (
-      <View /*style={}*/>
-        <ActivityIndicator size="large" />
-        <Text /*style={{ marginTop: 8 }}*/>Getting location and fetching nearby data…</Text>
-      </View>
-    ); 
+      console.log("loadings");
+      return (
+          <View className="h-full w-full justify-center items-center" /*style={}*/>
+              <View className="absolute justify-center top-1/2 items-center text-center w-full text-lg">
+                  <ActivityIndicator size="large" />
+                  <Text /*style={{ marginTop: 8 }}*/>Getting location and fetching nearby data…</Text>
+              </View>
+          </View>);
   }
 
   if (error) {
