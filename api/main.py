@@ -457,7 +457,7 @@ async def search(query: str, max_results: int = 5):
 
 
 @app.get("/prompt_search")
-async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
+async def prompt_search(latitude: float = 32.9859, longitude: float = -96.7503):
     """Use Ollama to generate search queries from prompt-search.txt, then search and return URLs.
 
     Args:
@@ -490,9 +490,9 @@ async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
                     elif city:
                         return city
                     else:
-                        return "Austin, Texas"  # fallback
+                        return "Richardson, Texas"  # fallback
             except Exception:
-                return "Austin, Texas"  # fallback on error
+                return "Richardson, Texas"  # fallback on error
 
         # Get city name
         city_name = await asyncio.to_thread(_get_city_name, latitude, longitude)
@@ -637,7 +637,7 @@ async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
 
 
 @app.get("/scrape_events")
-async def scrape_events(latitude: float = 30.2672, longitude: float = -97.7431):
+async def scrape_events(latitude: float = 32.9859, longitude: float = -96.7503):
     """Scrape event information from URLs found via prompt_search.
 
     This endpoint:
@@ -646,8 +646,8 @@ async def scrape_events(latitude: float = 30.2672, longitude: float = -97.7431):
     3. Returns structured JSON with page content, contact info, and metadata
 
     Args:
-        latitude: Latitude for location-based search. Default is Austin, Texas.
-        longitude: Longitude for location-based search. Default is Austin, Texas.
+        latitude: Latitude for location-based search. Default is Richardson, Texas.
+        longitude: Longitude for location-based search. Default is Richardson, Texas.
 
     Returns:
         JSON object with:
@@ -934,3 +934,131 @@ Content to analyze:
         return {"error": str(e), "type": type(e).__name__}
 
 
+@app.get("/find_event")
+async def find_event(latitude: float = 32.9859, longitude: float = -96.7503):
+    """Find and extract the first valid event from search results.
+
+    This endpoint:
+    1. Calls /prompt_search to get relevant URLs
+    2. Processes URLs one at a time, scraping and extracting event data
+    3. Returns as soon as a valid event is found
+    4. If no event found after 40 seconds, falls back to Local Good Pantry data
+
+    Args:
+        latitude: Latitude for location-based search. Default is Richardson, Texas.
+        longitude: Longitude for location-based search. Default is Richardson, Texas.
+
+    Returns:
+        JSON object with:
+        - events: List containing single event object with properties:
+            - Name: Event name
+            - Date: Event date/schedule
+            - Summary: Event description
+            - Address: Event address
+            - latitude: GPS latitude
+            - longitude: GPS longitude
+            - source_url: URL where event was found
+        - processing_time: Time taken to find the event
+        - urls_processed: Number of URLs processed before finding event
+    """
+    import time
+
+    # Fallback event data
+    FALLBACK_EVENT = {
+        "events": [{
+            "Name": "Local Good Pantry",
+            "Date": "Every Tuesday, Thursday, and Saturday",
+            "Summary": "The Local Good Pantry, part of the Local Good Collective started by Chase Oaks Church, provides food assistance to the Richardson community. It partners with the City of Richardson and the North Texas Food Bank to help local residents access food and resources.",
+            "Address": "741 S Sherman St, Richardson, TX 75081",
+            "latitude": 32.9392,
+            "longitude": -96.7294,
+            "source_url": "https://localgoodpantry.org/"
+        }]
+    }
+
+    try:
+        start_time = time.time()
+        TIMEOUT = 40  # seconds
+
+        # Step 1: Get search URLs
+        print(f"Starting find_event with lat={latitude}, lon={longitude}")
+        search_results = await prompt_search(latitude, longitude)
+
+        if "error" in search_results:
+            print("Error in prompt_search, using fallback")
+            return FALLBACK_EVENT
+
+        urls_to_process = search_results.get("urls", [])
+
+        if not urls_to_process:
+            print("No URLs found, using fallback")
+            return FALLBACK_EVENT
+
+        print(f"Found {len(urls_to_process)} URLs to process")
+
+        # Import scraping utilities
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+
+        from agent_util.scrape_utils import get_html, html_to_text, extract_title
+
+        # Step 2: Process URLs one at a time
+        for i, url_info in enumerate(urls_to_process):
+            # Check timeout
+            elapsed = time.time() - start_time
+            if elapsed >= TIMEOUT:
+                print(f"Timeout reached after {elapsed:.2f}s, using fallback")
+                fallback_result = FALLBACK_EVENT.copy()
+                fallback_result["processing_time"] = round(elapsed, 2)
+                fallback_result["urls_processed"] = i
+                return fallback_result
+
+            url = url_info['url']
+            print(f"Processing URL {i+1}/{len(urls_to_process)}: {url}")
+
+            try:
+                # Scrape the URL
+                def _scrape():
+                    html = get_html(url, timeout=15)
+                    return html_to_text(html)
+
+                content = await asyncio.to_thread(_scrape)
+                print(f"Scraped {len(content)} characters from {url}")
+
+                # Extract event from content
+                extraction_result = await extract_event(content)
+
+                # Check if valid event was found
+                if extraction_result.get("event"):
+                    event = extraction_result["event"]
+                    event["source_url"] = url
+
+                    elapsed = time.time() - start_time
+                    print(f"Found valid event in {elapsed:.2f}s after processing {i+1} URLs")
+
+                    return {
+                        "events": [event],
+                        "processing_time": round(elapsed, 2),
+                        "urls_processed": i + 1
+                    }
+                else:
+                    print(f"No valid event in {url}: {extraction_result.get('reasoning')}")
+
+            except Exception as e:
+                print(f"Error processing {url}: {type(e).__name__}: {e}")
+                continue
+
+        # If we've processed all URLs without finding an event
+        elapsed = time.time() - start_time
+        print(f"Processed all {len(urls_to_process)} URLs without finding event, using fallback")
+        fallback_result = FALLBACK_EVENT.copy()
+        fallback_result["processing_time"] = round(elapsed, 2)
+        fallback_result["urls_processed"] = len(urls_to_process)
+        return fallback_result
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Exception in find_event: {type(e).__name__}: {e}, using fallback")
+        return FALLBACK_EVENT
