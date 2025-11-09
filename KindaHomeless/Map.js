@@ -11,6 +11,10 @@ export function Map({ selectedMarker, setSelectedMarker }) {
   const [shelterMarkers, setShelterMarkers] = useState([]);
   const [showerMarkers, setShowerMarkers] = useState([]);
   const [toiletMarkers, setToiletMarkers] = useState([]);
+  const [drinkingWaterMarkers, setDrinkingWaterMarkers] = useState([]); // aqua
+  const [clothesMarkers, setClothesMarkers] = useState([]); // purple
+  // const [placeOfWorshipMarkers, setPlaceOfWorshipMarkers] = useState([]); // plum
+  const [welfareMarkers, setWelfareMarkers] = useState([]); // navy
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -39,65 +43,216 @@ export function Map({ selectedMarker, setSelectedMarker }) {
         
         // Determine API base host. On Android emulator use 10.0.2.2 to reach host machine. 
         // Toilets: tan markers, Showers: Blue Markers, Food: Yellow Markers, Shelters: Green Markers
-        // toilets","shower","drinking_water","water_tap","place_of_worship","social_facility","shelter","soup_kitchen","food_bank","clothing_bank","outreach","homeless_services","laundry","day_care","community_centre","social_centre","welfare"
+        // "place_of_worship","outreach","welfare"
         const apiHost = 'http://162.243.235.232:7544'
         const radiusMiles = 5;
         const url = `${apiHost}/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radiusMiles}`;
         try {
-          setLoading(true);
           // fetch toilets
-          const resToilets = await fetch(`${url}&features=toilets`);
+          const resToilets = await fetch(`${url}&feature=toilets`);
+          console.log("Fetching toilets from:", `${url}&feature=toilets`);
           if (resToilets.ok) {
             const toiletData = await resToilets.json();
-            setToiletMarkers(toiletData.results.map((item, index) => ({
-              id: `toilet-${index}`,
-              title: item.name,
-              description: item.description,
-              latitude: item.latitude,
-              longitude: item.longitude,
-            })));
+            if(toiletData !== undefined && toiletData.results){
+              setToiletMarkers(toiletData.results.map((item, index) => ({
+                id: `toilet-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              })));
+            }
             console.log("Toilet data fetched:", toiletData);
           }
           // fetch showers
-          const resShowers = await fetch(`${url}&features=showers`);
+          const resShowers = await fetch(`${url}&feature=shower`);
           if (resShowers.ok) {
             const showerData = await resShowers.json();
-            setShowerMarkers(showerData.results.map((item, index) => ({
-              id: `shower-${index}`,
-              title: item.name,
-              description: item.description,
-              latitude: item.latitude,
-              longitude: item.longitude,
-            })));
+            if(showerData !== undefined && showerData.results){
+              setShowerMarkers(showerData.results.map((item, index) => ({
+                id: `shower-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              })));
+            }
             console.log("Shower data fetched:", showerData);
           }
           // fetch food
-          const resFood = await fetch(`${url}&features=food`);
+          const resFood = await fetch(`${url}&feature="food_bank"`);
           if (resFood.ok) {
             const foodData = await resFood.json();
-            setFoodMarkers(foodData.results.map((item, index) => ({
-              id: `food-${index}`,
-              title: item.name,
-              description: item.description,
-              latitude: item.latitude,
-              longitude: item.longitude,
-            })));
+            if(foodData !== undefined && foodData.results){
+              setFoodMarkers(foodData.results.map((item, index) => ({
+                id: `food-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              })));
+            }
             console.log("Food data fetched:", foodData);
           }
+          const resSoupKitchens = await fetch(`${url}&feature=soup_kitchen`);
+          if (resSoupKitchens.ok) {
+            const soupKitchenData = await resSoupKitchens.json();
+            if(soupKitchenData !== undefined && soupKitchenData.results){
+              setFoodMarkers(prev => [...prev, ...soupKitchenData.results.map((item, index) => ({
+                id: `soup_kitchen-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              }))]);
+            }
+            console.log("Soup Kitchen data fetched:", soupKitchenData);
+          }
           // fetch shelters
-          const resShelters = await fetch(`${url}&features=shelters`);
+          const resShelters = await fetch(`${url}&feature=community_centre`);
           if (resShelters.ok) {
             const shelterData = await resShelters.json();
-            setShelterMarkers(shelterData.results.map((item, index) => ({
-              id: `shelter-${index}`,
-              title: item.name,
-              description: item.description,
-              latitude: item.latitude,
-              longitude: item.longitude,
-            })));
+            if(shelterData !== undefined && shelterData.results){
+              setShelterMarkers(shelterData.results.map((item, index) => ({
+                id: `shelter-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              })));
+            }
             console.log("Shelter data fetched:", shelterData);
           }
-          setLoading(false);
+          const resSocialcenters = await fetch(`${url}&feature=social_centre`);
+          if (resSocialcenters.ok) {
+            const socialcenterData = await resSocialcenters.json();
+            if(socialcenterData !== undefined && socialcenterData.results){
+              setShelterMarkers(prev => [...prev, ...socialcenterData.results.map((item, index) => ({
+                id: `social_centre-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              }))]);
+            }
+          }
+          const resSocialFacility = await fetch(`${url}&feature=social_facility`);
+          if (resSocialFacility.ok) {
+            const socialFacilityData = await resSocialFacility.json();
+            if(socialFacilityData !== undefined && socialFacilityData.results){
+              setShelterMarkers(prev => [...prev, ...socialFacilityData.results.map((item, index) => ({
+                id: `social_facility-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              }))]);
+            }
+          }
+          const resHomelessServices = await fetch(`${url}&feature=homeless_services`);
+          if (resHomelessServices.ok) {
+            const homelessServicesData = await resHomelessServices.json();
+            if(homelessServicesData !== undefined && homelessServicesData.results){
+              setShelterMarkers(prev => [...prev, ...homelessServicesData.results.map((item, index) => ({
+                id: `homeless_services-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              }))]);
+            }
+          }
+          const resDrinkingWater = await fetch(`${url}&feature=drinking_water`);
+          if (resDrinkingWater.ok) {
+            const drinkingWaterData = await resDrinkingWater.json();
+            if(drinkingWaterData !== undefined && drinkingWaterData.results){
+              setDrinkingWaterMarkers(drinkingWaterData.results.map((item, index) => ({
+                id: `drinking_water-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              })));
+            }
+          }
+          const resWaterTaps = await fetch(`${url}&feature=water_tap`);
+          if (resWaterTaps.ok) {
+            const waterTapData = await resWaterTaps.json();
+            if(waterTapData !== undefined && waterTapData.results){
+              setDrinkingWaterMarkers(prev => [...prev, ...waterTapData.results.map((item, index) => ({
+                id: `water_tap-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              }))]);
+            }
+          }
+          const resClothingBanks = await fetch(`${url}&feature=clothing_bank`);
+          if (resClothingBanks.ok) {
+            const clothingBankData = await resClothingBanks.json();
+            if(clothingBankData !== undefined && clothingBankData.results){
+              setClothesMarkers(clothingBankData.results.map((item, index) => ({
+                id: `clothing_bank-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              })));
+            }
+          }
+          const resLaundries = await fetch(`${url}&feature=laundry`);
+          if (resLaundries.ok) {
+            const laundryData = await resLaundries.json();
+            if(laundryData !== undefined && laundryData.results){
+              setClothesMarkers(prev => [...prev, ...laundryData.results.map((item, index) => ({
+                id: `laundry-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              }))]);
+            }
+          }
+          // resPlaceOfWorship = await fetch(`${url}&feature=place_of_worship`);
+          // if (resPlaceOfWorship.ok) {
+          //   const placeOfWorshipData = await resPlaceOfWorship.json();
+          //   if(placeOfWorshipData !== undefined && placeOfWorshipData.results){
+          //     setPlaceOfWorshipMarkers(placeOfWorshipData.results.map((item, index) => ({
+          //       id: `place_of_worship-${index}`,
+          //       title: item.name,
+          //       description: item.description,
+          //       latitude: item.latitude,
+          //       longitude: item.longitude,
+          //     })));
+          //   }
+          // }
+          resWelfare = await fetch(`${url}&feature=welfare`);
+          if (resWelfare.ok) {
+            const welfareData = await resWelfare.json();
+            if(welfareData !== undefined && welfareData.results){
+              setWelfareMarkers(welfareData.results.map((item, index) => ({
+                id: `welfare-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              })));
+            }
+          }
+          resOutreach = await fetch(`${url}&feature=outreach`);
+          if (resOutreach.ok) {
+            const outreachData = await resOutreach.json();
+            if(outreachData !== undefined && outreachData.results){
+              setWelfareMarkers(prev => [...prev, ...outreachData.results.map((item, index) => ({
+                id: `outreach-${index}`,
+                title: item.name,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+              }))]);
+            }
+          }
         } catch (apiError) {
           console.error('Error fetching nearby data:', apiError);
         }
@@ -192,6 +347,38 @@ export function Map({ selectedMarker, setSelectedMarker }) {
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
             pinColor='tan'
+            onPress={() => setSelectedMarker(marker)}
+          />
+        ))}
+        {drinkingWaterMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+            pinColor='aqua'
+            onPress={() => setSelectedMarker(marker)}
+          />
+        ))}
+        {clothesMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+            pinColor='purple'
+            onPress={() => setSelectedMarker(marker)}
+          />
+        ))}
+        {/* {placeOfWorshipMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+            pinColor='plum'
+            onPress={() => setSelectedMarker(marker)}
+          />
+        ))} */}
+        {welfareMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+            pinColor='navy'
             onPress={() => setSelectedMarker(marker)}
           />
         ))}
