@@ -5,6 +5,7 @@ from tools import TOOLS
 
 VLLM_URL = "http://localhost:8000/v1/chat/completions"
 MODEL    = "nvidia/Llama-3_3-Nemotron-Super-49B-v1_5"
+SYSTEM_PROMPT = open('agent_system.txt').read()
 
 def call_tool(name, arguments):
   fn = getattr(su, name, None)
@@ -27,7 +28,7 @@ def chat(messages):
 
 def run(query):
   messages = [
-    {"role":"system","content":"You are a helpful agent. When needed, call tools. Keep outputs concise."},
+    {"role":"system",SYSTEM_PROMPT},
     {"role":"user","content":query}
   ]
 
