@@ -56,6 +56,8 @@ async def nearby(latitude: float, longitude: float, radius: float = 3.0, feature
     Returns:
         JSON with list of facilities (id, latitude, longitude, name, address, distance, feature_type) limited by the specified limit, sorted by nearest first.
     """
+    import time
+
     # Map simple feature names to OSM tags
     feature_map = {
         "toilets": [("amenity", "toilets")],
@@ -78,12 +80,10 @@ async def nearby(latitude: float, longitude: float, radius: float = 3.0, feature
 
     # Handle search parameter with Ollama
     if search:
-        import time
         search_start = time.time()
         print(f"Search parameter received: '{search}'")
         def _query_ollama(search_string: str, features: list) -> list:
             """Query Ollama to match search string to feature names."""
-            import time
             ollama_start = time.time()
             ollama_host = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
             ollama_url = f"{ollama_host}/api/generate"
@@ -200,7 +200,8 @@ Match for "{search_string}":"""
             # Recursive call to nearby with specific feature (search=None to avoid re-matching)
             feature_results = await nearby(latitude, longitude, radius, matched_feature, limit, None)
             feature_elapsed = time.time() - feature_start
-            print(f"Feature {matched_feature} returned {len(feature_results.get('results', []))} results in {feature_elapsed:.3f}s")
+            result_count = len(feature_results.get('results', []))
+            print(f"Feature {matched_feature} returned {result_count} results in {feature_elapsed:.3f}s")
             if "results" in feature_results:
                 # Add feature_type to each result if not already present
                 for result in feature_results["results"]:
@@ -315,7 +316,10 @@ out center tags;"""
         return nearest_name
 
     try:
+        fetch_start = time.time()
         data = await asyncio.to_thread(_fetch)
+        fetch_elapsed = time.time() - fetch_start
+        print(f"Overpass API fetch time: {fetch_elapsed:.3f}s")
     except (URLError, HTTPError, TimeoutError, ValueError) as e:
         return {"error": "Failed to fetch data from Overpass API", "detail": str(e)}
 
@@ -373,13 +377,26 @@ out center tags;"""
 
     # Sort each feature type by distance and apply limit per feature
     facilities = []
+    facilities_to_process = []
+
+    # First, collect all facilities that need processing
     for feature_type, facilities_list in facilities_by_type.items():
         facilities_list.sort(key=lambda x: x["_d"])  # nearest first
+        facilities_to_process.extend(facilities_list[:limit])
 
-        # Process each facility (limited per feature type)
-        for it in facilities_list[:limit]:
-            address = await asyncio.to_thread(_reverse_geocode, it["latitude"], it["longitude"])
+    # Parallelize address lookups for all facilities at once
+    if facilities_to_process:
+        geocode_start = time.time()
+        address_tasks = [
+            asyncio.to_thread(_reverse_geocode, it["latitude"], it["longitude"])
+            for it in facilities_to_process
+        ]
+        addresses = await asyncio.gather(*address_tasks)
+        geocode_elapsed = time.time() - geocode_start
+        print(f"Nominatim geocoding ({len(facilities_to_process)} addresses in parallel): {geocode_elapsed:.3f}s")
 
+        # Now process each facility with its pre-fetched address
+        for it, address in zip(facilities_to_process, addresses):
             # Use the facility's name tag if it exists
             tags = it.get("tags", {})
             name = tags.get("name")
