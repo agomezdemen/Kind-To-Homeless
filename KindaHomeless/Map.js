@@ -43,8 +43,10 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
         }
 
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-        const { latitude, longitude } = loc.coords;
-
+        const { latitude, longitude } =  loc.coords;
+        //testing code for when we need to show off other cities
+        /*const latitude = 30.2718
+        const longitude = -97.744*/
         const initialRegion = {
           latitude,
           longitude,
