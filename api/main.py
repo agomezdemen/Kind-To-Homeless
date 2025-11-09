@@ -73,6 +73,37 @@ out center tags;"""
         except Exception:
             return {"name": "", "address": {}}
 
+    def _find_nearby_named_place(lat: float, lon: float) -> str:
+        """Find the name of the closest named building/POI using Overpass API."""
+        overpass_url = "https://overpass-api.de/api/interpreter"
+        # Search for nearby named features within 50 meters
+        query = f"""[out:json];
+(
+  nwr(around:50,{lat},{lon})[name];
+  nwr(around:50,{lat},{lon})["addr:housename"];
+);
+out center tags 1;"""
+
+        try:
+            data = urlparse.urlencode({"data": query}).encode()
+            req = urlrequest.Request(
+                overpass_url,
+                data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                method="POST",
+            )
+            with urlrequest.urlopen(req, timeout=10) as resp:
+                body = resp.read().decode("utf-8")
+                result = json.loads(body)
+                elements = result.get("elements", [])
+                if elements:
+                    # Return the first named element found
+                    tags = elements[0].get("tags", {})
+                    return tags.get("name") or tags.get("addr:housename", "")
+        except Exception:
+            pass
+        return ""
+
     try:
         data = await asyncio.to_thread(_fetch)
     except (URLError, HTTPError, TimeoutError, ValueError) as e:
@@ -100,15 +131,20 @@ out center tags;"""
     # Sort by distance and limit to 20
     items.sort(key=lambda x: x["_d"])  # nearest first
 
-    # Reverse geocode each location
+    # Reverse geocode each location and find nearby named places
     toilets = []
     for it in items[:20]:
         location_info = await asyncio.to_thread(_reverse_geocode, it["latitude"], it["longitude"])
+        place_name = await asyncio.to_thread(_find_nearby_named_place, it["latitude"], it["longitude"])
+
+        # Use the named place if found, otherwise fall back to a generic description
+        display_name = place_name if place_name else location_info.get("address", {}).get("road", "Unknown Location")
+
         toilets.append({
             "id": it["id"],
             "latitude": it["latitude"],
             "longitude": it["longitude"],
-            "name": location_info["name"],
+            "name": display_name,
             "address": location_info["address"]
         })
 
