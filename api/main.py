@@ -58,6 +58,21 @@ out center tags;"""
         c = 2 * asin(sqrt(a))
         return R * c
 
+    def _reverse_geocode(lat: float, lon: float) -> dict:
+        """Query self-hosted Nominatim API for location name and address."""
+        nominatim_url = f"http://nominatim:8080/reverse?format=json&lat={lat}&lon={lon}"
+        try:
+            req = urlrequest.Request(nominatim_url, method="GET")
+            with urlrequest.urlopen(req, timeout=10) as resp:
+                body = resp.read().decode("utf-8")
+                result = json.loads(body)
+                return {
+                    "name": result.get("display_name", ""),
+                    "address": result.get("address", {})
+                }
+        except Exception:
+            return {"name": "", "address": {}}
+
     try:
         data = await asyncio.to_thread(_fetch)
     except (URLError, HTTPError, TimeoutError, ValueError) as e:
@@ -84,13 +99,17 @@ out center tags;"""
 
     # Sort by distance and limit to 20
     items.sort(key=lambda x: x["_d"])  # nearest first
-    toilets = [
-        {
+
+    # Reverse geocode each location
+    toilets = []
+    for it in items[:20]:
+        location_info = await asyncio.to_thread(_reverse_geocode, it["latitude"], it["longitude"])
+        toilets.append({
             "id": it["id"],
             "latitude": it["latitude"],
-            "longitude": it["longitude"]
-        }
-        for it in items[:20]
-    ]
+            "longitude": it["longitude"],
+            "name": location_info["name"],
+            "address": location_info["address"]
+        })
 
     return {"toilets": toilets}
