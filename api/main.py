@@ -429,6 +429,31 @@ out center tags;"""
     return {"results": facilities}
 
 
+@app.get("/search")
+async def search(query: str):
+    """Search DuckDuckGo and return top 5 result URLs.
+
+    Args:
+        query: The search query string.
+
+    Returns:
+        JSON object with list of top 5 search result URLs.
+    """
+    try:
+        from ddgs import DDGS
+
+        def _search():
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=5))
+                return [{"url": r["href"], "title": r["title"]} for r in results]
+
+        search_results = await asyncio.to_thread(_search)
+        return {"results": search_results}
+
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+
+
 @app.get("/agent")
 async def agent(url: str):
     """Use AI agent to scrape and analyze a URL for homeless resources.
