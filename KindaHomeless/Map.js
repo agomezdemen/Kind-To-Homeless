@@ -4,7 +4,7 @@ import { StyleSheet, View, ActivityIndicator, Text, Platform, useColorScheme } f
 import * as Location from 'expo-location';
 import "./global.css";
 
-export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCombinedMarkers }) {
+export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCombinedMarkers, search }) {
   const mapRef = useRef(null);
   const [region, setRegion] = useState(null);
   const [yourLocation, setYourLocation] = useState(null);
@@ -35,6 +35,8 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
   useEffect(() => {
     (async () => {
       try {
+          setCombinedMarkers([]);
+          setLoading(true);
         const { status } = await Location.requestForegroundPermissionsAsync(); // get location permission
         if (status !== 'granted') {
           setError('Location permission denied');
@@ -59,7 +61,14 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
         // "place_of_worship","outreach","welfare"
         const apiHost = 'http://162.243.235.232:7544'
         const radiusMiles = 3;
-        const url = `${apiHost}/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radiusMiles}`;
+        var url = `${apiHost}/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radiusMiles}`;
+        console.log(url);
+        console.log(search);
+        if (search.length > 1) {
+            url += "&search=" +search;
+            console.log(`search wasnt null, url is {url}`);
+        }
+          console.log(url);
         try {
 
           const resAll = await fetch(`${url}`);
@@ -104,7 +113,7 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
         setLoading(false);
       }
     })();
-  }, []);
+  }, [search]);
 
   if (loading) { // Grayson do your UI magic here for the loading state
       console.log("loadings");
@@ -119,9 +128,11 @@ export function Map({ selectedMarker, setSelectedMarker, combinedMarkers, setCom
 
   if (error) {
     return ( // Grayson do your UI magic here for when they deny location permission or other errors
-      <View /*style={styles.center}*/>
-        <Text>{error}</Text>
-      </View>
+        <View className="h-full w-full justify-center items-center" /*style={}*/>
+            <View className="absolute justify-center top-1/2 items-center text-center w-full text-lg">
+                <Text /*style={{ marginTop: 8 }}*/>You nitwit.</Text>
+            </View>
+        </View>
     );
   }
   return (
