@@ -86,7 +86,7 @@ def test_agent_roundtrip(url: str, terms: list[str]):
         return
 
     # check server reachability
-    host, port = "127.0.0.1", 8000
+    host, port = "127.0.0.1", 7545
     if not reachable(host, port):
         print(f"vLLM server not reachable at {host}:{port} — start it to run this step")
         return

@@ -3,7 +3,7 @@ import json, requests
 import scrape_utils as su
 from tools import TOOLS
 
-VLLM_URL = "http://localhost:8000/v1/chat/completions"
+VLLM_URL = "http://localhost:7545/v1/chat/completions"
 MODEL    = "nvidia/Llama-3_3-Nemotron-Super-49B-v1_5"
 SYSTEM_PROMPT = open('agent_system.txt').read()
 
@@ -28,7 +28,7 @@ def chat(messages):
 
 def run(query):
   messages = [
-    {"role":"system",SYSTEM_PROMPT},
+    {"role":"system","content":SYSTEM_PROMPT},
     {"role":"user","content":query}
   ]
 
