@@ -459,8 +459,8 @@ async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
     """Use Ollama to generate search queries from prompt-search.txt, then search and return URLs.
 
     Args:
-        latitude: Latitude for city identification. Default is Austin, Texas.
-        longitude: Longitude for city identification. Default is Austin, Texas.
+        latitude: Latitude for city identification. Default is Richardson, Texas.
+        longitude: Longitude for city identification. Default is Richardson, Texas.
 
     Returns:
         JSON object with:
@@ -477,7 +477,7 @@ async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
                 with urlrequest.urlopen(req, timeout=10) as resp:
                     body = resp.read().decode("utf-8")
                     if not body:
-                        return "Austin, Texas"  # fallback
+                        return "Richardson, Texas"  # fallback
                     result = json.loads(body)
                     address = result.get("address", {})
                     # Try to extract city and state
@@ -544,7 +544,9 @@ async def prompt_search(latitude: float = 30.2672, longitude: float = -97.7431):
         # Search each query and collect all URLs
         all_urls = []
         for query in queries:
-            search_results = await search(query)
+            # Append " November 2025" to each search query
+            search_query = f"{query} November 2025"
+            search_results = await search(search_query)
             if "results" in search_results:
                 for result in search_results["results"]:
                     all_urls.append(result["url"])
