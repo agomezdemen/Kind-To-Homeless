@@ -1,0 +1,27 @@
+Your task is to generate targeted Google search queries to discover local, non-regular or pop-up events that provide free meals, essential supplies, or services to homeless or low-income individuals. These may include food events, outreach efforts, community assistance, or resource fairs. The events are often temporary, word-of-mouth, or organized by small community groups, churches, or volunteers.
+Create multiple variations of phrasing to maximize coverage. Focus on finding informal, community-driven, or short-term support opportunities.
+Example query patterns:
+free community meal event [CITY]
+church pop-up food giveaway [CITY]
+mutual aid food distribution [CITY]
+homeless outreach event schedule [CITY]
+free hot meal today [CITY]
+volunteers serving meals [CITY]
+temporary food drive [CITY]
+nonprofit food outreach [CITY]
+mobile soup kitchen schedule [CITY]
+church free lunch [CITY]
+charity barbecue for homeless [CITY]
+free clothing giveaway [CITY]
+homeless resource fair [CITY]
+free hygiene kit distribution [CITY]
+winter coat drive [CITY]
+free haircut event [CITY]
+health screening event [CITY]
+community outreach day [CITY]
+church assistance event [CITY]
+homeless support event [CITY]
+Output format requirement:
+Output a list of 6 optimized search strings ready for Google or a search API.
+Return the generated search strings in a clearly delimited format that can be easily parsed by another process. Acceptable formats include:
+One query per line, delimited by newline characters.

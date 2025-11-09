@@ -454,6 +454,69 @@ async def search(query: str):
         return {"error": str(e), "type": type(e).__name__}
 
 
+@app.get("/prompt_search")
+async def prompt_search():
+    """Use Ollama to generate search queries from prompt-search.txt, then search and return URLs.
+
+    Returns:
+        JSON object with list of all search result URLs from generated queries.
+    """
+    try:
+        # Load the prompt from file
+        # In Docker, WORKDIR is /app, so we can use absolute path
+        prompt_path = '/app/agentic_prompts/prompt-search.txt'
+        # Fallback for local development
+        if not os.path.exists(prompt_path):
+            prompt_path = os.path.join(os.path.dirname(__file__), '..', 'agentic_prompts', 'prompt-search.txt')
+
+        with open(prompt_path, 'r') as f:
+            prompt = f.read()
+
+        # Call Ollama to generate search queries
+        ollama_host = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
+        ollama_url = f"{ollama_host}/api/generate"
+
+        payload = {
+            "model": "nemotron:70B",
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.7
+            }
+        }
+
+        def _query_ollama():
+            req = urlrequest.Request(
+                ollama_url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urlrequest.urlopen(req, timeout=60) as resp:
+                body = resp.read().decode('utf-8')
+                result = json.loads(body)
+                return result.get("response", "").strip()
+
+        # Get generated queries from Ollama
+        response_text = await asyncio.to_thread(_query_ollama)
+
+        # Parse comma-separated queries
+        queries = [q.strip() for q in response_text.split(',') if q.strip()]
+
+        # Search each query and collect all URLs
+        all_urls = []
+        for query in queries:
+            search_results = await search(query)
+            if "results" in search_results:
+                for result in search_results["results"]:
+                    all_urls.append(result["url"])
+
+        return {"urls": all_urls}
+
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+
+
 @app.get("/agent")
 async def agent(url: str):
     """Use AI agent to scrape and analyze a URL for homeless resources.
