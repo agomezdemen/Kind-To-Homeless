@@ -1,5 +1,7 @@
-import {StyleSheet, View, Text, ScrollView, ActivityIndicator} from 'react-native';
+import {StyleSheet, View, Text, ScrollView, ActivityIndicator, Button} from 'react-native';
 import BottomSheet, { BottomSheetView , BottomSheetScrollView} from '@gorhom/bottom-sheet';
+import { Linking } from 'react-native';
+import { Icon } from '@rneui/themed';
 
 import React, {useRef, useMemo, useCallback, useState} from "react";
 import "./global.css";
@@ -12,6 +14,11 @@ export default function List({markers, selectedMarker, setSelectedMarker}) {
     const handleSheetChanges = useCallback((index) => {
         console.log('handleSheetChanges', index);
     }, []);
+
+    const openInGoogleMaps = (latitude, longitude) => {
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+        Linking.openURL(url).catch(err => console.error("Couldn't load Google Maps", err));
+    };
 
     const handleItemPress = useCallback((item, index, count) => {
         setSelectedMarker(item);
@@ -89,10 +96,16 @@ export default function List({markers, selectedMarker, setSelectedMarker}) {
                                     isSelected ? pressedColor : color
                                 }`}
                             >
-                                <View className="w-full left-4 flex">
-                                    <Text className="text-4xl text-white">{item.name}</Text>
-                                    <Text className="text-xl text-gray-200">{item.feature_type.replaceAll('_', ' ')} | {item.distance} miles</Text>
-                                    <Text className="text-lg w-64 text-gray-200">{item.address}</Text>
+                                <View className="w-full flex flex-row">
+                                    <View className="w-10/12 left-4">
+                                        <Text className="text-4xl text-white">{item.name}</Text>
+                                        <Text className="text-xl text-gray-200">{item.feature_type.replaceAll('_', ' ')} | {item.distance} miles</Text>
+                                        <Text className="text-lg w-64 text-gray-200">{item.address}</Text>
+                                    </View>
+                                    <View className="p-4 w-16 h-16 " onTouchEnd={() => {openInGoogleMaps(item.latitude, item.longitude)}}>
+                                        <Icon  name="map" color="white" />
+                                    </View>
+
                                 </View>
                             </View>
                         );
