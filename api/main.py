@@ -103,7 +103,7 @@ Search: sleep → shelter
 Match for "{search_string}":"""
 
             payload = {
-                "model": "nemotron",
+                "model": "nemotron:70B",
                 "prompt": prompt,
                 "stream": False,
                 "options": {
