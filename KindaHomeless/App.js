@@ -74,8 +74,8 @@ export default function App() {
 
   const handleMapPress = (e) => {
     const { latitude, longitude } = e.nativeEvent.coordinate;
-    if(markers.contains(m => m.latitude === latitude && m.longitude === longitude)) {
-      markers.at(markers.findIndex(m => m.latitude === latitude && m.longitude === longitude)).description = "pin check";
+    if(markers.includes(m => m.latitude === latitude && m.longitude === longitude)) {
+      markers.at(markers.findIndex(m => m.latitude === latitude && m.longitude === longitude)).title = "PIN check";
     }
     //const id = String(Date.now());
     //setMarkers((prev) => [...prev, { id, title: 'Pinned', description: 'User placed', latitude, longitude }]);
@@ -83,27 +83,27 @@ export default function App() {
 
   if (loading) { // Grayson do your UI magic here for the loading state
     return (
-      <View style={styles.center}>
+      <View /*style={}*/>
         <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 8 }}>Getting location and fetching nearby data…</Text>
+        <Text /*style={{ marginTop: 8 }}*/>Getting location and fetching nearby data…</Text>
       </View>
     ); 
   }
 
   if (error) {
     return ( // Grayson do your UI magic here for when they deny location permission or other errors
-      <View style={styles.center}>
+      <View /*style={styles.center}*/>
         <Text>{error}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View /*style={styles.container}*/>
       
       <MapView
         ref={mapRef}
-        style={styles.map}
+        style={{width: '100%', height: '100%'}}
         initialRegion={region}
         onPress={handleMapPress}
       >
@@ -113,10 +113,10 @@ export default function App() {
             coordinate={{ latitude: m.latitude, longitude: m.longitude }}
           >
             <Callout>
-              <View style={{ width: 180 }}>
-                <Text style={{ fontWeight: '600' }}>{m.title}</Text>
+              <View /*style={{ width: 180 }}*/>
+                <Text /*style={{ fontWeight: '600' }}*/>{m.title}</Text>
                 <Text>{m.description}</Text>
-                <Text style={{ color: '#666', marginTop: 6 }}>{m.latitude.toFixed(5)}, {m.longitude.toFixed(5)}</Text>
+                <Text /*style={{ color: '#666', marginTop: 6 }}*/>{m.latitude.toFixed(5)}, {m.longitude.toFixed(5)}</Text>
               </View>
             </Callout>
           </Marker>
@@ -125,13 +125,3 @@ export default function App() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    width: '100%',
-    height: '100%',
-  },
-});
